@@ -967,11 +967,57 @@ body { background: #f5f4ef; color: #1a1a1a; }
 
 /* While dragging, show a subtle outline on the element under the pointer */
 body.atlas-help-dragging * { cursor: copy !important; }
+/* CRITICAL: make the chat-rail transparent to pointer events during the
+   drag, so document.elementFromPoint() returns whatever is BEHIND the
+   chat (the mandala, the dialog, the result text). Removing the body
+   class on pointer-up cleanly restores normal pointer behaviour, so the
+   chat's input, send button and ? icon stay fully usable afterwards. */
+body.atlas-help-dragging .chat-rail { pointer-events: none; }
+body.atlas-help-dragging .chat-help-ghost { pointer-events: none; }
+
 .atlas-help-target {
   outline: 2px dashed #4f7cff !important;
   outline-offset: 4px !important;
   background-color: rgba(79,124,255,0.08) !important;
 }
+
+/* "drag & ask" hint bubble that pops above the ? icon every ~30s */
+.chat-help-icon { position: relative; }
+.chat-help-icon::before {
+  content: attr(data-hint);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #1a2540;
+  color: #fafaf6;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+.chat-help-icon::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1a2540;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.chat-help-icon.hint-on::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.chat-help-icon.hint-on::after { opacity: 1; }
 
 .chat-input-row textarea {
   flex: 1;

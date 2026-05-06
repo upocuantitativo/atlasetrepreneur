@@ -95,36 +95,63 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
   };
 
   // ---- Draggable help icon ------------------------------------------------
+  // Uses WINDOW-level listeners during the drag so we always catch
+  // pointer-up — and never mutates any DOM styles. The chat is hidden
+  // from elementFromPoint via a `body.atlas-help-dragging` CSS rule
+  // that sets pointer-events:none on the chat-rail for the duration of
+  // the drag, then is removed cleanly on release.
   const startDrag = (e) => {
     e.preventDefault();
-    if (!open) onToggle();        // make sure the chat is visible to receive answer
+    if (!open) onToggle();
     setDragging(true);
     setDragPos({ x: e.clientX, y: e.clientY });
     document.body.classList.add('atlas-help-dragging');
-    try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (_) {}
-  };
-  const onDragMove = (e) => {
-    if (!dragging) return;
-    setDragPos({ x: e.clientX, y: e.clientY });
-    document.querySelectorAll('.atlas-help-target').forEach(el => el.classList.remove('atlas-help-target'));
-    const el = pickHelpTarget(e.clientX, e.clientY);
-    if (el) el.classList.add('atlas-help-target');
-  };
-  const endDrag = (e) => {
-    if (!dragging) return;
-    setDragging(false);
-    document.body.classList.remove('atlas-help-dragging');
-    document.querySelectorAll('.atlas-help-target').forEach(el => el.classList.remove('atlas-help-target'));
-    const el = pickHelpTarget(e.clientX, e.clientY);
-    const ctx = extractContextFrom(el);
-    if (!ctx || ctx.text.length < 5) return;
-    send(`Explain this concept in the context of the Method Atlas, briefly: "${ctx.text}"`);
+
+    const onMove = (ev) => {
+      setDragPos({ x: ev.clientX, y: ev.clientY });
+      document.querySelectorAll('.atlas-help-target').forEach(x => x.classList.remove('atlas-help-target'));
+      const el = pickHelpTarget(ev.clientX, ev.clientY);
+      if (el) el.classList.add('atlas-help-target');
+    };
+    const cleanup = () => {
+      document.body.classList.remove('atlas-help-dragging');
+      document.querySelectorAll('.atlas-help-target').forEach(x => x.classList.remove('atlas-help-target'));
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      setDragging(false);
+    };
+    const onUp = (ev) => {
+      const el = pickHelpTarget(ev.clientX, ev.clientY);
+      cleanup();
+      const ctx = extractContextFrom(el);
+      if (!ctx || ctx.text.length < 5) return;
+      send(`Explain this concept in the context of the Method Atlas, briefly: "${ctx.text}"`);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   };
 
+  // Periodic "drag & ask" tooltip above the ? icon — appears every ~30 s
+  // for a couple of seconds while the chat is open, so the user
+  // discovers the feature without a permanent label cluttering the UI.
+  const [hintShown, setHintShown] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      setHintShown(true);
+      setTimeout(() => alive && setHintShown(false), 2400);
+    };
+    const first = setTimeout(tick, 6000);
+    const id = setInterval(tick, 28000);
+    return () => { alive = false; clearTimeout(first); clearInterval(id); };
+  }, [open]);
+
   return (
-    <div className={`chat-rail tone-${tone} ${open ? 'open' : 'closed'}`}
-         onPointerMove={dragging ? onDragMove : undefined}
-         onPointerUp={dragging ? endDrag : undefined}>
+    <div className={`chat-rail tone-${tone} ${open ? 'open' : 'closed'}`}>
       <button
         className={`chat-rail-toggle ${firstVisit && !open ? 'first-visit' : ''}`}
         onClick={() => { onToggle(); setFirstVisit(false); localStorage.setItem('atlas_chat_seen', '1'); }}
@@ -209,8 +236,9 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
 
           <div className="chat-input-row">
             <button
-              className="chat-help-icon"
+              className={`chat-help-icon ${hintShown ? 'hint-on' : ''}`}
               title="Drag onto any concept on the page to ask about it"
+              data-hint="drag & ask"
               onPointerDown={startDrag}>?</button>
             <textarea
               value={input}
@@ -234,14 +262,10 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
 // --- Helpers --------------------------------------------------------------
 
 function pickHelpTarget(x, y) {
-  let el = document.elementFromPoint(x, y);
-  // Skip the chat itself and the dragging ghost.
-  while (el && (el.closest && (el.closest('.chat-rail') || el.closest('.chat-help-ghost')))) {
-    el.style.pointerEvents = 'none';
-    el = document.elementFromPoint(x, y);
-    if (!el) break;
-  }
-  return el;
+  // While dragging the chat-rail has pointer-events:none via the
+  // `body.atlas-help-dragging` CSS rule, so elementFromPoint already
+  // sees through it. Just return whatever's there.
+  return document.elementFromPoint(x, y);
 }
 
 function extractContextFrom(el) {
