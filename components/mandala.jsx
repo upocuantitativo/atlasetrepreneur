@@ -16,17 +16,12 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   const cx = size / 2, cy = size / 2;
   const rOuter = size * 0.46;
 
-  // Camera params: visible 3D tilt so the disc clearly rotates as the
-  // focus shifts. The reasoning trail lives on a separate layer that
-  // does NOT inherit the X-tilt, so the path stays head-on regardless.
-  const { tiltX, rotZ, zoom, translateY } = useMemo(() => {
-    if (!depth) return { tiltX: 0, rotZ: 0, zoom: 1, translateY: 0 };
-    if (!focusSector) return { tiltX: 24, rotZ: 0, zoom: 1, translateY: 0 };
-    const s = sectors.find(s => s.id === focusSector);
-    if (!s) return { tiltX: 24, rotZ: 0, zoom: 1, translateY: 0 };
-    const rotZ = ((-s.angle) + 360) % 360;
-    return { tiltX: 28, rotZ, zoom: 1, translateY: 0 };
-  }, [focusSector, focusRing, depth, sectors, size]);
+  // Camera params are derived AFTER the path useMemo so the disc can be
+  // rotated to put the LATEST vertex of the itinerary at the top (north).
+  // That keeps the most recent reasoning step in focus while the older
+  // vertices fan out toward the front/bottom — the area closest to the
+  // viewer with the X-tilt — so the most of the trail stays visible.
+  const tiltX = depth ? 28 : 0;
 
   // Reasoning-path polyline. One vertex per answered question; the radius
   // shrinks monotonically with each answer (outer rim → centre) so
@@ -91,6 +86,27 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
     const leader = sectors.find(s => s.id === leaderId);
     return { path: built, leaderInfo: leader ? { label: leader.label, hue: leader.hue, sub: leader.sub } : null };
   }, [history, sectors, rings, rOuter, cx, cy, size, totalQuestions]);
+
+  // Rotate the disc so that the LATEST vertex of the itinerary lands at
+  // the top (north). That keeps the most recent reasoning step in
+  // focus while pushing the rest of the trail toward the front-bottom
+  // of the screen, which is the area closest to the viewer with the
+  // X-tilt — i.e. the most visible.
+  const { rotZ, zoom, translateY } = useMemo(() => {
+    if (!depth) return { rotZ: 0, zoom: 1, translateY: 0 };
+    if (path.length === 0) {
+      // No history yet — fall back to focusSector if any
+      if (!focusSector) return { rotZ: 0, zoom: 1, translateY: 0 };
+      const s = sectors.find(s => s.id === focusSector);
+      if (!s) return { rotZ: 0, zoom: 1, translateY: 0 };
+      return { rotZ: ((-s.angle) + 360) % 360, zoom: 1, translateY: 0 };
+    }
+    const last = path[path.length - 1];
+    const mathAngleDeg = Math.atan2(last.y - cy, last.x - cx) * 180 / Math.PI;
+    const sectorAngleDeg = mathAngleDeg + 90; // 0° = top in our convention
+    const rotZ = ((-sectorAngleDeg) + 360) % 360;
+    return { rotZ, zoom: 1, translateY: 0 };
+  }, [path, focusSector, depth, sectors, cx, cy]);
 
   // Theme palette per tone.
   const theme = TONES[tone] || TONES['serif-dark'];
