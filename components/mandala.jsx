@@ -10,33 +10,46 @@
 
 const { useMemo } = React;
 
-window.Mandala3D = function Mandala3D({ focusSector, focusRing, tone = 'serif-dark', size = 820, depth = true }) {
+window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, tone = 'serif-dark', size = 1100, depth = true }) {
   const sectors = window.TAXONOMY.sectors;
   const rings = window.TAXONOMY.rings;
   const cx = size / 2, cy = size / 2;
   const rOuter = size * 0.46;
 
-  // Camera params: tilt the plane, then rotate it so the focused sector
-  // swings toward the viewer's bottom-front (visible, large, in focus).
-  // Critical: with rotateX(+) and perspective-origin near the top, the
-  // BOTTOM of the SVG is what's closest to the camera. So we want the
-  // focused sector at SVG-angle 180° (bottom) AND we lift the plane up
-  // (negative translateY) so its bottom doesn't slide off-screen.
+  // Camera params: gentle frontal tilt, with the focused sector rotated to
+  // the TOP (north / 12 o'clock) so the user reads "you are heading here".
   const { tiltX, rotZ, zoom, translateY } = useMemo(() => {
     if (!depth) return { tiltX: 0, rotZ: 0, zoom: 1, translateY: 0 };
-    if (!focusSector) return { tiltX: 38, rotZ: 0, zoom: 1, translateY: 0 };
+    if (!focusSector) return { tiltX: 18, rotZ: 0, zoom: 1, translateY: 0 };
     const s = sectors.find(s => s.id === focusSector);
-    if (!s) return { tiltX: 38, rotZ: 0, zoom: 1, translateY: 0 };
-    // After rotateX(+) the front-close half is the BOTTOM of the SVG (y > cy,
-    // SVG-angle ≈ 180° in our 0°=top convention). To put sector S's angle there,
-    // we need to rotate the plane by (180° - S.angle) in CSS. But CSS rotateZ
-    // rotates clockwise visually when positive (since SVG y is flipped). Our
-    // sector angles are also clockwise from top, so the right rotation is
-    // simply: rotZ such that S.angle + rotZ ≡ 180° (mod 360).
-    const rotZ = ((180 - s.angle) + 360) % 360;
-    const ringZoom = focusRing == null ? 1 : 1 + (focusRing * 0.14);
-    return { tiltX: 46, rotZ, zoom: ringZoom, translateY: size * 0.04 };
+    if (!s) return { tiltX: 18, rotZ: 0, zoom: 1, translateY: 0 };
+    // SVG-angle 0° = top of the disc. Rotate so the focused sector lands at
+    // angle 0°: rotZ = -s.angle (mod 360).
+    const rotZ = ((-s.angle) + 360) % 360;
+    const ringZoom = focusRing == null ? 1 : 1 + (focusRing * 0.06);
+    return { tiltX: 22, rotZ, zoom: ringZoom, translateY: 0 };
   }, [focusSector, focusRing, depth, sectors, size]);
+
+  // Polyline of the reasoning path. For each answered question we plot the
+  // sector that received the highest cumulative weight up to that moment,
+  // at the radius corresponding to that question's ring. Connecting the
+  // points draws the user's journey across the disc.
+  const path = useMemo(() => {
+    if (!history || history.length === 0) return [];
+    const acc = {};
+    return history.map((h, idx) => {
+      Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
+      const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
+      const leaderId = ranked.length ? ranked[0][0] : null;
+      const sector = sectors.find(s => s.id === leaderId) || sectors[0];
+      const ring = rings[h.ring] || rings[0];
+      const radius = rOuter * ring.rNorm;
+      const a = (sector.angle - 90) * Math.PI / 180;
+      const x = cx + radius * Math.cos(a);
+      const y = cy + radius * Math.sin(a);
+      return { x, y, sectorId: sector.id, hue: sector.hue, label: shortAnswer(h.answerLabel), idx: idx + 1 };
+    });
+  }, [history, sectors, rings, rOuter, cx, cy]);
 
   // Theme palette per tone.
   const theme = TONES[tone] || TONES['serif-dark'];
@@ -191,6 +204,42 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, tone = 'serif-da
           <circle cx={cx} cy={cy} r={size * 0.012} fill={theme.coreGlow} />
           <circle cx={cx} cy={cy} r={size * 0.024} fill="none"
             stroke={theme.coreGlow} strokeOpacity="0.6" strokeWidth="1" />
+
+          {/* Reasoning-path polyline: black trail, white labels with the
+              short answer at each vertex. */}
+          {path.length > 1 && (
+            <polyline
+              points={path.map(p => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke="#000"
+              strokeOpacity="0.85"
+              strokeWidth={size * 0.0035}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+          {path.map((p, i) => (
+            <g key={`pp-${i}`}>
+              <circle cx={p.x} cy={p.y} r={size * 0.018} fill="#000" stroke="#fff" strokeWidth={size * 0.0025} />
+              <text
+                x={p.x} y={p.y + size * 0.005}
+                fill="#fff"
+                fontSize={size * 0.012}
+                fontFamily={theme.serif}
+                textAnchor="middle"
+                fontWeight={600}>{p.idx}</text>
+              <text
+                x={p.x} y={p.y - size * 0.028}
+                fill="#fff"
+                fontSize={size * 0.0135}
+                fontFamily={theme.serif}
+                textAnchor="middle"
+                paintOrder="stroke"
+                stroke="#000"
+                strokeWidth={size * 0.003}
+                strokeLinejoin="round">{p.label}</text>
+            </g>
+          ))}
         </svg>
       </div>
     </div>
@@ -234,3 +283,13 @@ const TONES = {
 };
 
 window.MANDALA_TONES = TONES;
+
+// Compress an answer label into ~3 words for plotting on the polyline.
+function shortAnswer(s) {
+  if (!s) return '';
+  // Drop everything from the first dash, em-dash or parenthesis onward.
+  const cut = s.split(/[—–\-(]/)[0].trim();
+  const words = cut.split(/\s+/);
+  if (words.length <= 4) return cut;
+  return words.slice(0, 4).join(' ') + '…';
+}

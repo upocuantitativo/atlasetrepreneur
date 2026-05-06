@@ -54,6 +54,18 @@ The eight sectors are **ANOVA / GLM**, **Regression / GLM**, **PLS-SEM**,
 **fsQCA**, **Clustering**, **Boosted Trees**, **Explainable AI / EBM** and
 **Neural Networks**.
 
+## Help (chat) — pending configuration
+
+The right-rail consultation chat in this repository ships **without** a server
+key. Anyone cloning the repo will see "ayuda pendiente de configuración" /
+"help pending configuration" until they wire it up. Two options:
+
+1. **Server proxy → Groq (recommended, free)**. Upload `chat.php` to the
+   server, copy `chat_config.php.example` to `chat_config.php`, paste a free
+   API key from <https://console.groq.com/keys>. The browser then talks to
+   `/atlas/chat.php` instead of any local model.
+2. **Local Ollama (developer mode)**. See instructions below.
+
 ## Local LLM (Ollama)
 
 The chat lives on the right rail and stays mounted throughout the

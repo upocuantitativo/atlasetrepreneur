@@ -19,6 +19,7 @@
 <script src="data/taxonomy.js"></script>
 <script src="data/questions.js"></script>
 <script src="data/knowledge.js"></script>
+<script src="data/loader.js"></script>
 
 <script type="text/babel" src="components/mandala.jsx"></script>
 <script type="text/babel" src="components/mini-map.jsx"></script>
@@ -29,8 +30,12 @@
 <script type="text/babel" src="components/app.jsx"></script>
 
 <script type="text/babel">
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  root.render(<window.GuideApp tone="editorial" />);
+  // Try to fetch live taxonomy/questions from the admin DB; fall back to the
+  // bundled defaults if the API is offline.
+  window.AtlasLoader.load().then(() => {
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<window.GuideApp tone="editorial" />);
+  });
 </script>
 </body>
 </html>

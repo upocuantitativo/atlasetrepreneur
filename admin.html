@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Method Atlas — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root { --serif: 'EB Garamond', Georgia, serif; --sans: 'Inter Tight', sans-serif; --mono: 'JetBrains Mono', monospace; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--serif); background: #f5f4ef; color: #1a1a1a; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: #1a2540; color: #fafaf0; }
+header h1 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: 0.04em; }
+header h1 em { font-style: italic; color: #cfe1ff; font-weight: 400; }
+header .right { font-family: var(--sans); font-size: 12px; }
+header button { background: #c0392b; color:#fff; border:none; padding:6px 12px; cursor:pointer; border-radius:4px; font-family: var(--sans); font-size: 12px; }
+
+.tabs { display: flex; gap: 4px; padding: 12px 24px 0; background:#fafaf6; border-bottom: 1px solid rgba(26,37,64,0.15); }
+.tab { background: none; border: 1px solid rgba(26,37,64,0.18); border-bottom:none; border-radius:6px 6px 0 0; padding:8px 16px; cursor:pointer; font-family: var(--serif); font-size:14px; }
+.tab.active { background:#1a2540; color:#fafaf0; border-color:#1a2540; }
+
+main { padding: 24px; max-width: 1400px; margin: 0 auto; display:grid; grid-template-columns: 280px 1fr; gap: 20px; }
+.panel { background:#fff; border:1px solid rgba(26,37,64,0.12); border-radius:8px; padding:14px; max-height:calc(100vh - 160px); overflow:auto; }
+.list-item { padding:8px 10px; border-radius:4px; cursor:pointer; font-size:14px; }
+.list-item:hover { background:#f0eee8; }
+.list-item.active { background:#1a2540; color:#fafaf0; }
+.list-item small { display:block; opacity:0.7; font-size:11px; font-style:italic; margin-top:2px; }
+
+.editor { background:#fff; border:1px solid rgba(26,37,64,0.12); border-radius:8px; padding:24px; }
+.editor h2 { margin: 0 0 16px; font-weight: 500; font-size: 22px; }
+.field { display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+.field label { font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color:#5e6680; }
+.field input[type="text"], .field input[type="number"], .field textarea, .field select {
+  width:100%; font-family: var(--serif); font-size: 14px; padding: 8px 10px;
+  border: 1px solid rgba(26,37,64,0.2); border-radius:4px; background: #fdfcf8;
+}
+.field textarea { font-family: var(--mono); font-size:12px; resize:vertical; }
+.field-row { display:flex; gap:12px; }
+.field-row .field { flex:1; }
+.array-hint { font-family: var(--sans); font-size: 11px; color:#888; margin-top:2px; font-style: italic; }
+
+.actions { margin-top:18px; display:flex; gap:10px; align-items:center; }
+.btn { background:#1a2540; color:#fafaf0; border:none; padding:10px 18px; cursor:pointer; border-radius:4px; font-family: var(--sans); font-size: 13px; letter-spacing: 0.04em; }
+.btn:hover { background:#0e1530; }
+.btn.danger { background: #c0392b; }
+.btn.ghost { background: transparent; color: #1a2540; border: 1px solid #1a2540; }
+.flash { padding: 10px 14px; border-radius:4px; font-size: 13px; margin-left: auto; }
+.flash.ok { background:#d8f1d4; color:#2a5e2a; }
+.flash.err { background:#f5d6d6; color:#7a1f1f; }
+
+.options-table { width:100%; border-collapse: collapse; margin-top:8px; }
+.options-table th, .options-table td { text-align:left; padding:6px 8px; border-bottom: 1px solid rgba(26,37,64,0.08); font-size: 13px; vertical-align: top; }
+.options-table th { font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color:#5e6680; }
+.options-table textarea { width:100%; min-height: 36px; font-family: var(--serif); font-size: 13px; border: 1px solid rgba(26,37,64,0.18); border-radius:3px; padding:4px 6px; }
+.weight-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 4px; }
+.weight-cell { display:flex; align-items:center; gap:4px; font-size:12px; }
+.weight-cell input { width: 50px; padding:3px 4px; font-family: var(--mono); font-size:12px; border: 1px solid rgba(26,37,64,0.2); border-radius:3px; }
+
+.login { max-width:380px; margin: 80px auto; background:#fff; padding: 32px; border-radius:10px; border:1px solid rgba(26,37,64,0.12); text-align:center; }
+.login h1 { margin: 0 0 6px; font-weight: 500; }
+.login p { color:#5e6680; font-size: 14px; margin-bottom:18px; font-style: italic; }
+.login input { width:100%; font-size:16px; padding:10px 12px; border:1px solid rgba(26,37,64,0.25); border-radius:4px; margin-bottom:10px; font-family: var(--serif); }
+.toolbar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+.toolbar button { font-family: var(--sans); font-size: 12px; padding: 4px 10px; border:1px solid rgba(26,37,64,0.2); background:#fafaf6; cursor:pointer; border-radius:4px; }
+.toolbar button:hover { background:#1a2540; color:#fff; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+const API = './api.php';
+
+async function api(action, body, method='GET') {
+  const url = `${API}?action=${encodeURIComponent(action)}`;
+  const opts = { method, credentials: 'same-origin' };
+  if (body !== undefined) {
+    opts.method = 'POST';
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+  return j;
+}
+
+function Login({ onLogged }) {
+  const [pwd, setPwd] = useState('');
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr(null);
+    try { await api('login', { password: pwd }); onLogged(); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="login">
+      <h1>Method Atlas — Admin</h1>
+      <p>Enter the admin password to edit techniques and questions.</p>
+      <form onSubmit={submit}>
+        <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="Admin password" autoFocus />
+        <button className="btn" disabled={busy} type="submit">{busy?'Signing in…':'Sign in'}</button>
+        {err && <div className="flash err" style={{marginTop:10}}>{err}</div>}
+      </form>
+    </div>
+  );
+}
+
+function ArrayField({ label, value, onChange, hint, mode='lines' }) {
+  // mode='lines'   => one item per line
+  // mode='json'    => arbitrary JSON array (objects)
+  const [text, setText] = useState(() => mode==='json' ? JSON.stringify(value || [], null, 2) : (value||[]).join('\n'));
+  useEffect(() => {
+    setText(mode==='json' ? JSON.stringify(value || [], null, 2) : (value||[]).join('\n'));
+  }, [JSON.stringify(value), mode]);
+  const apply = () => {
+    if (mode === 'json') {
+      try { onChange(JSON.parse(text||'[]')); } catch (e) { alert('Invalid JSON: ' + e.message); }
+    } else {
+      onChange(text.split('\n').map(l => l.trim()).filter(Boolean));
+    }
+  };
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <textarea rows={mode==='json'?10:5} value={text} onChange={e=>setText(e.target.value)} onBlur={apply} />
+      <div className="array-hint">{hint || (mode==='json' ? 'JSON array. Click outside to apply.' : 'One item per line. Click outside to apply.')}</div>
+    </div>
+  );
+}
+
+function SectorEditor({ sector, onSave, flash }) {
+  const [s, setS] = useState(sector);
+  useEffect(() => setS(sector), [sector?.id]);
+  if (!s) return <div className="editor">Pick a sector on the left.</div>;
+  const f = (k) => (e) => setS({ ...s, [k]: e.target.value });
+  const set = (k, v) => setS({ ...s, [k]: v });
+  return (
+    <div className="editor">
+      <h2>Sector: {s.label}</h2>
+      <div className="field-row">
+        <div className="field"><label>ID</label><input type="text" value={s.id} disabled /></div>
+        <div className="field"><label>Display order</label><input type="number" value={s.display_order||0} onChange={f('display_order')} /></div>
+        <div className="field"><label>Angle (°)</label><input type="number" step="0.1" value={s.angle} onChange={f('angle')} /></div>
+        <div className="field"><label>Hue (0-360)</label><input type="number" value={s.hue} onChange={f('hue')} /></div>
+      </div>
+      <div className="field"><label>Label</label><input type="text" value={s.label} onChange={f('label')} /></div>
+      <div className="field"><label>Sub-label</label><input type="text" value={s.sub} onChange={f('sub')} /></div>
+      <div className="field"><label>Goal (one sentence)</label><textarea rows={2} value={s.goal||''} onChange={f('goal')} style={{fontFamily:'var(--serif)',fontSize:14}} /></div>
+      <div className="field"><label>Description (paragraph)</label><textarea rows={4} value={s.description||''} onChange={f('description')} style={{fontFamily:'var(--serif)',fontSize:14}} /></div>
+
+      <ArrayField label="Techniques" value={s.techniques} onChange={v=>set('techniques',v)} />
+      <ArrayField label="Hypothesis templates" value={s.hypotheses} onChange={v=>set('hypotheses',v)} />
+      <ArrayField label="Conditions to apply" value={s.conditions} onChange={v=>set('conditions',v)} />
+      <ArrayField label="Assumptions" value={s.assumes} onChange={v=>set('assumes',v)} />
+      <ArrayField label="Procedural checklist" value={s.procedure_steps} onChange={v=>set('procedure_steps',v)} />
+      <ArrayField label="Software" value={s.software} onChange={v=>set('software',v)} />
+      <ArrayField label="Authors" value={s.authors} mode="json" onChange={v=>set('authors',v)} hint='JSON array of {name, work, url, why}' />
+      <ArrayField label="Foundational references" value={s.key_refs} onChange={v=>set('key_refs',v)} />
+      <ArrayField label="Suggested chat questions" value={s.chat_hints} onChange={v=>set('chat_hints',v)} />
+
+      <div className="actions">
+        <button className="btn" onClick={()=>onSave(s)}>Save sector</button>
+        {flash && <div className={`flash ${flash.ok?'ok':'err'}`}>{flash.msg}</div>}
+      </div>
+    </div>
+  );
+}
+
+function QuestionEditor({ question, options, sectors, onSaveQuestion, onSaveOptions, onDelete, flash }) {
+  const [q, setQ] = useState(question);
+  const [opts, setOpts] = useState(options || []);
+  useEffect(() => { setQ(question); setOpts(options || []); }, [question?.id]);
+  if (!q) return <div className="editor">Pick a question on the left.</div>;
+
+  const updateOpt = (i, k, v) => setOpts(opts.map((o, idx) => idx===i ? { ...o, [k]: v } : o));
+  const updateWeight = (i, sectorId, value) => {
+    const w = { ...(opts[i].weights || {}) };
+    if (value === '' || value === null) delete w[sectorId]; else w[sectorId] = parseFloat(value);
+    updateOpt(i, 'weights', w);
+  };
+  const addOpt = () => setOpts([...opts, { label: '', weights: {} }]);
+  const removeOpt = (i) => setOpts(opts.filter((_, idx) => idx !== i));
+
+  const showIfTypes = ['always','leaderIs','topThreeIncludes','topThreeIncludesAll','tieBreak'];
+  const showIfType = q.show_if?.type || (q.always_show ? 'always' : '');
+
+  return (
+    <div className="editor">
+      <h2>Question: {q.id}</h2>
+      <div className="field-row">
+        <div className="field"><label>ID</label><input type="text" value={q.id} disabled /></div>
+        <div className="field"><label>Ring (0,1,2)</label><input type="number" min="0" max="2" value={q.ring_index||0} onChange={e=>setQ({...q, ring_index: parseInt(e.target.value,10)})} /></div>
+        <div className="field"><label>Display order</label><input type="number" value={q.display_order||0} onChange={e=>setQ({...q, display_order: parseInt(e.target.value,10)})} /></div>
+      </div>
+      <div className="field"><label>Question text</label><textarea rows={2} value={q.question_text} onChange={e=>setQ({...q, question_text: e.target.value})} style={{fontFamily:'var(--serif)',fontSize:14}} /></div>
+      <div className="field"><label>Hint</label><input type="text" value={q.hint||''} onChange={e=>setQ({...q, hint: e.target.value})} /></div>
+      <div className="field-row">
+        <div className="field">
+          <label>Always show?</label>
+          <select value={q.always_show?'1':'0'} onChange={e=>setQ({...q, always_show: e.target.value==='1'?1:0})}>
+            <option value="1">Yes — show always</option>
+            <option value="0">No — depends on previous answers</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>Multi-select?</label>
+          <select value={q.multi_select?'1':'0'} onChange={e=>setQ({...q, multi_select: e.target.value==='1'?1:0})}>
+            <option value="0">Single answer</option>
+            <option value="1">Multiple answers (sum weights)</option>
+          </select>
+        </div>
+      </div>
+
+      {!q.always_show && (
+        <div className="field">
+          <label>Show-if predicate</label>
+          <div className="field-row">
+            <select value={showIfType} onChange={e=>{
+              const t = e.target.value;
+              if (t==='always') setQ({...q, always_show:1, show_if:null});
+              else if (t==='leaderIs') setQ({...q, show_if:{type:'leaderIs',id:'fsqca'}});
+              else if (t==='topThreeIncludes') setQ({...q, show_if:{type:'topThreeIncludes',ids:['fsqca']}});
+              else if (t==='topThreeIncludesAll') setQ({...q, show_if:{type:'topThreeIncludesAll',ids:['regression','plssem']}});
+              else if (t==='tieBreak') setQ({...q, show_if:{type:'tieBreak'}});
+            }}>
+              {showIfTypes.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {(showIfType==='leaderIs') && (
+              <select value={q.show_if?.id||''} onChange={e=>setQ({...q, show_if:{type:'leaderIs',id:e.target.value}})}>
+                {sectors.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            )}
+            {(showIfType==='topThreeIncludes' || showIfType==='topThreeIncludesAll') && (
+              <input type="text" value={(q.show_if?.ids||[]).join(',')} onChange={e=>setQ({...q, show_if:{...(q.show_if||{}),ids:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)}})} placeholder="comma-separated sector ids" />
+            )}
+          </div>
+        </div>
+      )}
+
+      <h3 style={{marginTop:24, fontWeight:500}}>Options ({opts.length})</h3>
+      <div className="toolbar">
+        <button onClick={addOpt}>+ Add option</button>
+      </div>
+      <table className="options-table">
+        <thead><tr><th style={{width:'40%'}}>Label</th><th>Weight per technique (intensity)</th><th></th></tr></thead>
+        <tbody>
+          {opts.map((o, i) => (
+            <tr key={i}>
+              <td><textarea value={o.label} onChange={e=>updateOpt(i,'label',e.target.value)} rows={2} /></td>
+              <td>
+                <div className="weight-grid">
+                  {sectors.map(s => (
+                    <label key={s.id} className="weight-cell" title={s.label}>
+                      <span style={{flex:1, fontSize:11}}>{s.id}</span>
+                      <input type="number" step="1" value={o.weights?.[s.id] ?? ''} placeholder="0" onChange={e=>updateWeight(i, s.id, e.target.value)} />
+                    </label>
+                  ))}
+                </div>
+              </td>
+              <td><button className="btn danger" onClick={()=>removeOpt(i)} style={{padding:'4px 10px',fontSize:12}}>×</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="actions">
+        <button className="btn" onClick={()=>{ onSaveQuestion(q); onSaveOptions(q.id, opts); }}>Save question + options</button>
+        <button className="btn danger" onClick={()=>{ if (confirm('Delete this question?')) onDelete(q.id); }}>Delete question</button>
+        {flash && <div className={`flash ${flash.ok?'ok':'err'}`}>{flash.msg}</div>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [authed, setAuthed] = useState(false);
+  const [data, setData] = useState(null);
+  const [tab, setTab] = useState('sectors');
+  const [pickedSector, setPickedSector] = useState(null);
+  const [pickedQuestion, setPickedQuestion] = useState(null);
+  const [flash, setFlash] = useState(null);
+
+  useEffect(() => { api('whoami').then(r => { setAuthed(!!r.admin); if (r.admin) loadAll(); }); }, []);
+
+  const loadAll = async () => {
+    const d = await api('get_all');
+    setData(d);
+    if (!pickedSector) setPickedSector(d.sectors[0]?.id);
+    if (!pickedQuestion) setPickedQuestion(d.questions[0]?.id);
+  };
+
+  if (!authed) return <Login onLogged={()=>{ setAuthed(true); loadAll(); }} />;
+  if (!data) return <div style={{padding:48}}>Loading…</div>;
+
+  const sector = data.sectors.find(s => s.id === pickedSector);
+  const question = data.questions.find(q => q.id === pickedQuestion);
+  const optsForQ = data.options.filter(o => o.question_id === pickedQuestion);
+
+  const flashOk = (msg) => { setFlash({ok:true,msg}); setTimeout(()=>setFlash(null), 2500); };
+  const flashErr = (msg) => { setFlash({ok:false,msg}); setTimeout(()=>setFlash(null), 5000); };
+
+  const saveSector = async (s) => {
+    try { await api('save_sector', s); flashOk('Saved.'); loadAll(); } catch (e) { flashErr(e.message); }
+  };
+  const saveQuestion = async (q) => {
+    try { await api('save_question', q); } catch (e) { flashErr(e.message); }
+  };
+  const saveOptions = async (qid, opts) => {
+    try {
+      await api('save_options', { question_id: qid, options: opts.map((o,i)=>({label:o.label, weights:o.weights||{}, display_order:i})) });
+      flashOk('Saved.');
+      loadAll();
+    } catch (e) { flashErr(e.message); }
+  };
+  const deleteQuestion = async (id) => {
+    try { await api('delete_question', { id }); flashOk('Deleted.'); setPickedQuestion(null); loadAll(); } catch (e) { flashErr(e.message); }
+  };
+
+  const logout = async () => { await api('logout'); setAuthed(false); setData(null); };
+
+  return (
+    <>
+      <header>
+        <h1>Method Atlas <em>Entrepreneur</em> — Admin</h1>
+        <div className="right">
+          <a href="./" target="_blank" style={{color:'#cfe1ff',marginRight:14}}>Open public site ↗</a>
+          <button onClick={logout}>Sign out</button>
+        </div>
+      </header>
+      <div className="tabs">
+        <button className={`tab ${tab==='sectors'?'active':''}`} onClick={()=>setTab('sectors')}>Techniques ({data.sectors.length})</button>
+        <button className={`tab ${tab==='questions'?'active':''}`} onClick={()=>setTab('questions')}>Questions ({data.questions.length})</button>
+      </div>
+      <main>
+        {tab==='sectors' ? (
+          <>
+            <div className="panel">
+              {data.sectors.map(s => (
+                <div key={s.id} className={`list-item ${s.id===pickedSector?'active':''}`} onClick={()=>setPickedSector(s.id)}>
+                  {s.label}
+                  <small>{s.sub}</small>
+                </div>
+              ))}
+            </div>
+            <SectorEditor sector={sector} onSave={saveSector} flash={flash} />
+          </>
+        ) : (
+          <>
+            <div className="panel">
+              {data.questions.map(q => (
+                <div key={q.id} className={`list-item ${q.id===pickedQuestion?'active':''}`} onClick={()=>setPickedQuestion(q.id)}>
+                  {q.id}
+                  <small>{q.question_text.slice(0,80)}{q.question_text.length>80?'…':''}</small>
+                </div>
+              ))}
+              <hr />
+              <button className="btn" onClick={async ()=>{
+                const id = prompt('New question id (e.g. Q12 or A-Foo)');
+                if (!id) return;
+                await api('save_question', { id, ring_index:0, question_text:'(new question)', hint:'', always_show:1, multi_select:0, show_if:null, display_order: data.questions.length });
+                loadAll(); setPickedQuestion(id);
+              }}>+ Add question</button>
+            </div>
+            <QuestionEditor question={question} options={optsForQ} sectors={data.sectors}
+              onSaveQuestion={saveQuestion} onSaveOptions={saveOptions} onDelete={deleteQuestion} flash={flash} />
+          </>
+        )}
+      </main>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

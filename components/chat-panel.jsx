@@ -36,6 +36,15 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [firstVisit, setFirstVisit] = useState(
+    () => !localStorage.getItem('atlas_chat_seen')
+  );
+  useEffect(() => {
+    if (open && firstVisit) {
+      localStorage.setItem('atlas_chat_seen', '1');
+      setFirstVisit(false);
+    }
+  }, [open, firstVisit]);
   const [apiUrl, setApiUrl] = useState(
     () => localStorage.getItem('atlas_api_url') || DEFAULT_API_URL
   );
@@ -94,8 +103,8 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
   return (
     <div className={`chat-rail tone-${tone} ${open ? 'open' : 'closed'}`}>
       <button
-        className="chat-rail-toggle"
-        onClick={onToggle}
+        className={`chat-rail-toggle ${firstVisit && !open ? 'first-visit' : ''}`}
+        onClick={() => { onToggle(); setFirstVisit(false); localStorage.setItem('atlas_chat_seen', '1'); }}
         title={open ? 'Hide consultation' : 'Show consultation'}>
         <span className="chat-rail-toggle-mark">{open ? '›' : '‹'}</span>
         <span className="chat-rail-toggle-label">{open ? 'Hide' : 'Ask'}</span>

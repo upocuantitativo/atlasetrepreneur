@@ -14,13 +14,13 @@ window.TAXONOMY = {
   sectors: [
     {
       id: 'anova',
-      label: 'ANOVA / GLM',
-      sub: 'Group comparison',
+      label: 'Group Contrasts',
+      sub: 'Parametric & non-parametric tests',
       angle: 0,
       hue: 8,
-      techniques: ['One-way ANOVA', 'Factorial ANOVA', 'ANCOVA', 'MANOVA', 'Mixed-effects ANOVA'],
-      goal: 'Test mean differences across discrete groups (e.g. training programmes, incubator cohorts, treatment arms).',
-      description: 'Family of linear models that decomposes variance to test whether the means of three or more groups differ. The default lens for experimental and quasi-experimental entrepreneurship studies — programme evaluations, treatment comparisons, A/B tests of pedagogical interventions.',
+      techniques: ['One-way ANOVA', 'Factorial ANOVA', 'ANCOVA', 'MANOVA', 'Mixed-effects ANOVA', 'Mann–Whitney U (2 groups)', 'Kruskal–Wallis H (k groups)', 'Wilcoxon signed-rank', 'Friedman test', 'Permutation / bootstrap tests'],
+      goal: 'Test differences between groups — parametric (ANOVA family) when assumptions hold, non-parametric (Mann–Whitney, Kruskal–Wallis, Wilcoxon, Friedman) when they do not.',
+      description: 'Umbrella for inferential group comparison. Parametric ANOVA decomposes variance under normality and homoscedasticity; when those assumptions fail, rank-based or permutation alternatives (Mann–Whitney, Kruskal–Wallis, Wilcoxon, Friedman) deliver robust contrasts. The default lens for experimental and quasi-experimental entrepreneurship studies — programme evaluations, treatment comparisons, A/B tests.',
       hypotheses: [
         'H0: μ₁ = μ₂ = μ₃ (no mean differences across treatment groups).',
         'H1: at least one programme mean differs in entrepreneurial intention / self-efficacy / new-venture creation rate.',

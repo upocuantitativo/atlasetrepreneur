@@ -23,12 +23,20 @@ body { background: #02030a; color: #e8eeff; }
 /* ==== Mandala stage ==== */
 .mandala-stage {
   position: absolute; inset: 0;
-  perspective: 2400px;
-  perspective-origin: 50% 30%;
+  right: var(--chat-gutter);
+  perspective: 2800px;
+  perspective-origin: 50% 50%;
   background: var(--mandala-bg);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
-  padding-top: 90px;
+  padding-top: 60px;
+  transition: right 0.25s ease;
+}
+.mandala-plane {
+  /* Scale the disc up so it fills more of the viewport without bleeding past
+     the header / dialog. */
+  width: min(95vmin, 1150px) !important;
+  height: min(95vmin, 1150px) !important;
 }
 .mandala-atmo { position: absolute; inset: 0; pointer-events: none; }
 .mandala-stars {
@@ -721,6 +729,13 @@ body { background: #02030a; color: #e8eeff; }
   align-self: flex-start;   /* the toggle stays at the top of the rail */
 }
 .chat-rail-toggle:hover { background: rgba(40, 60, 120, 0.9); }
+.chat-rail-toggle.first-visit {
+  animation: chat-toggle-blink 1.4s ease-in-out infinite;
+}
+@keyframes chat-toggle-blink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 124, 255, 0); transform: translateX(0); }
+  50%      { box-shadow: 0 0 0 14px rgba(79, 124, 255, 0); transform: translateX(-3px); background: rgba(79, 124, 255, 0.92); color: #fff; }
+}
 .chat-rail-toggle-mark { font-size: 18px; line-height: 1; }
 .chat-rail-toggle-label {
   writing-mode: vertical-rl;
