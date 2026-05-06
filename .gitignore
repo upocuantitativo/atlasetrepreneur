@@ -24,6 +24,7 @@ npm-debug.log*
 .env
 .env.local
 *.ppk
+chat_config.php
 
 # Local working artefacts (not part of the app)
 .claude/

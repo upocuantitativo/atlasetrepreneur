@@ -1,32 +1,33 @@
-// ChatPanel — persistent local-LLM consultation panel docked to the right side,
-// below the mini-map. Toggleable (show/hide). Designed so that opening or
-// closing the chat does NOT alter the styling or layout of the question dialog
-// or the mandala — they live on the main column; the chat lives on a separate
-// right rail.
+// ChatPanel — persistent LLM consultation panel docked to the right rail.
+// Toggleable show/hide. Uses a server-side PHP proxy that talks to Groq
+// (OpenAI-compatible) so the API key stays server-side and visitors don't
+// need any local installation.
 //
-// Talks to a local Ollama server at OLLAMA_URL (default http://localhost:11434).
-// The system prompt is built every turn and includes:
-//   - role instructions
-//   - the curated bibliography digest (window.ATLAS_KNOWLEDGE)
-//   - the live context: which question the user is on, or which technique
-//     was recommended
+// Default endpoint:  /atlas/chat.php  (relative to the host)
+// Default model:     llama-3.1-8b-instant  (free, very fast on Groq)
 //
-// Default model: 'llama3.1:8b'. The user can override URL and
-// model from the gear icon. State persists in localStorage.
+// Advanced users can switch the URL/model from the gear icon — including
+// pointing it back at a local Ollama server for offline development.
 
 const { useState, useRef, useEffect } = React;
 
-const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
-const DEFAULT_MODEL = 'llama3.1:8b';
+// Default endpoint — works whether the site is served from upo.digital/atlas
+// or from the project root.
+const DEFAULT_API_URL = (() => {
+  if (typeof window === 'undefined') return '/chat.php';
+  const path = window.location.pathname || '/';
+  // strip trailing /index.html or filename
+  const base = path.replace(/[^\/]+$/, '');
+  return base + 'chat.php';
+})();
+const DEFAULT_MODEL = 'llama-3.1-8b-instant';
 
 const SUGGESTED_MODELS = [
-  'llama3.1:8b',
-  'llama3.1:70b-instruct-q4_K_M',
-  'mistral:7b-instruct',
-  'qwen2.5:7b-instruct',
-  'qwen2.5:14b-instruct',
-  'gemma2:9b-instruct',
-  'phi3:medium-128k-instruct',
+  'llama-3.1-8b-instant',
+  'llama-3.3-70b-versatile',
+  'llama3-groq-70b-8192-tool-use-preview',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it',
 ];
 
 window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onToggle }) {
@@ -35,16 +36,16 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [ollamaUrl, setOllamaUrl] = useState(
-    () => localStorage.getItem('atlas_ollama_url') || DEFAULT_OLLAMA_URL
+  const [apiUrl, setApiUrl] = useState(
+    () => localStorage.getItem('atlas_api_url') || DEFAULT_API_URL
   );
   const [model, setModel] = useState(
-    () => localStorage.getItem('atlas_ollama_model') || DEFAULT_MODEL
+    () => localStorage.getItem('atlas_api_model') || DEFAULT_MODEL
   );
   const scrollerRef = useRef(null);
 
-  useEffect(() => { localStorage.setItem('atlas_ollama_url', ollamaUrl); }, [ollamaUrl]);
-  useEffect(() => { localStorage.setItem('atlas_ollama_model', model); }, [model]);
+  useEffect(() => { localStorage.setItem('atlas_api_url', apiUrl); }, [apiUrl]);
+  useEffect(() => { localStorage.setItem('atlas_api_model', model); }, [model]);
 
   useEffect(() => {
     if (scrollerRef.current) {
@@ -65,8 +66,8 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
     setMessages(next);
     setBusy(true);
     try {
-      const reply = await callOllama({
-        url: ollamaUrl,
+      const reply = await callChat({
+        url: apiUrl,
         model,
         messages: [{ role: 'system', content: systemPrompt }, ...next],
       });
@@ -108,7 +109,7 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
               <span className="chat-title-text">Method consultation</span>
             </div>
             <div className="chat-header-actions">
-              <button className="chat-icon-btn" onClick={() => setShowSettings(s => !s)} title="Model & server settings">⚙</button>
+              <button className="chat-icon-btn" onClick={() => setShowSettings(s => !s)} title="Endpoint & model">⚙</button>
               <button className="chat-icon-btn" onClick={reset} title="Clear conversation">↺</button>
             </div>
           </div>
@@ -116,12 +117,12 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
           {showSettings && (
             <div className="chat-settings">
               <label>
-                <span>Ollama URL</span>
+                <span>Endpoint URL</span>
                 <input
                   type="text"
-                  value={ollamaUrl}
-                  onChange={e => setOllamaUrl(e.target.value)}
-                  placeholder="http://localhost:11434"
+                  value={apiUrl}
+                  onChange={e => setApiUrl(e.target.value)}
+                  placeholder="/atlas/chat.php or http://localhost:11434/api/chat"
                 />
               </label>
               <label>
@@ -130,16 +131,17 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
                   type="text"
                   value={model}
                   onChange={e => setModel(e.target.value)}
-                  list="ollama-model-suggestions"
+                  list="atlas-model-suggestions"
                 />
-                <datalist id="ollama-model-suggestions">
+                <datalist id="atlas-model-suggestions">
                   {SUGGESTED_MODELS.map(m => <option key={m} value={m} />)}
                 </datalist>
               </label>
               <p className="chat-settings-hint">
-                Local-only. Run Ollama with <code>OLLAMA_ORIGINS=*</code> so the
-                browser can reach it. Pull the model with{' '}
-                <code>ollama pull {model}</code>.
+                By default the chat goes through a server-side proxy
+                (<code>chat.php</code>) backed by Groq. To use a local Ollama
+                instead, set the URL to <code>http://localhost:11434/api/chat</code>{' '}
+                and a local model like <code>llama3.1:8b</code>.
               </p>
             </div>
           )}
@@ -178,13 +180,12 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
             )}
             {error && (
               <div className="chat-error">
-                <strong>Could not reach the local model.</strong>
+                <strong>Could not reach the model.</strong>
                 <div className="chat-error-detail">{error}</div>
                 <ol className="chat-error-steps">
-                  <li>Install Ollama from <a href="https://ollama.com/download" target="_blank" rel="noreferrer">ollama.com</a>.</li>
-                  <li>Pull a model: <code>ollama pull {model}</code></li>
-                  <li>Start it with browser CORS allowed: <code>OLLAMA_ORIGINS=* ollama serve</code></li>
-                  <li>Confirm <code>{ollamaUrl}/api/tags</code> responds in your browser.</li>
+                  <li>If you see this on first use, the server may not have a Groq API key configured yet — contact the site admin.</li>
+                  <li>If you switched to local Ollama: ensure <code>ollama serve</code> is running and the URL points to <code>/api/chat</code>.</li>
+                  <li>Hit <code>↺</code> to clear the conversation and retry.</li>
                 </ol>
               </div>
             )}
@@ -208,19 +209,37 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
   );
 };
 
-async function callOllama({ url, model, messages }) {
-  const endpoint = url.replace(/\/$/, '') + '/api/chat';
-  const res = await fetch(endpoint, {
+// ---------------------------------------------------------------------------
+// API call. Auto-detects whether the endpoint is OpenAI-compatible (Groq /
+// chat.php proxy → response shape `choices[0].message.content`) or Ollama
+// (`/api/chat` → response shape `message.content`). The URL is the cue.
+async function callChat({ url, model, messages }) {
+  const isOllama = /\/api\/chat\b/.test(url);
+  const body = isOllama
+    ? { model, messages, stream: false, options: { temperature: 0.4 } }
+    : { model, messages, temperature: 0.4 };
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, stream: false, options: { temperature: 0.4 } }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} — ${txt.slice(0, 200)}`);
+    throw new Error(`HTTP ${res.status} — ${txt.slice(0, 250)}`);
   }
   const data = await res.json();
-  return (data && data.message && data.message.content) || '(empty response)';
+  if (isOllama) {
+    return (data && data.message && data.message.content) || '(empty response)';
+  }
+  // OpenAI-compatible (Groq, OpenAI, etc.)
+  if (data && data.choices && data.choices[0] && data.choices[0].message) {
+    return data.choices[0].message.content || '(empty response)';
+  }
+  if (data && data.error) {
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
+  return '(empty response)';
 }
 
 function buildSystemPrompt(ctx) {
