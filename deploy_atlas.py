@@ -26,6 +26,7 @@ EXCLUDE_GLOBS = [
     "biblio/*.pdf",
     "ejemplo.png",
     "deploy_atlas.py",
+    "chat_config.php",     # uploaded out-of-band; contains the API key
     "*.pyc",
 ]
 
