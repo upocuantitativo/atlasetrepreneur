@@ -29,6 +29,14 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
     localStorage.setItem('atlas_chat_open', chatOpen ? '1' : '0');
   }, [chatOpen]);
 
+  // When the user reaches the recommendation, force the consultation chat
+  // open so they can immediately ask follow-up questions about the
+  // recommended technique. Works on desktop and mobile (responsive CSS
+  // already adapts the rail width on small viewports).
+  useEffect(() => {
+    if (done) setChatOpen(true);
+  }, [done]);
+
   const allQuestions = window.QUESTIONS;
 
   // Cumulative scores from history.
@@ -145,7 +153,10 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
 
   return (
     <div className={`guide-app tone-${tone} ${chatOpen ? 'chat-on' : 'chat-off'}`}>
-      <window.Mandala3D focusSector={focusSector} focusRing={focusRing} history={history} totalQuestions={total} tone={tone} />
+      <window.Mandala3D focusSector={focusSector} focusRing={focusRing}
+        history={history} totalQuestions={total}
+        isFinal={!currentQ || (qIdx + 1 >= total)}
+        tone={tone} />
 
       {focusSectorObj && history.length >= 3 && (
         <div className="sector-hud">

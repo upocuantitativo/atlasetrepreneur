@@ -10,7 +10,7 @@
 
 const { useMemo } = React;
 
-window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQuestions, tone = 'serif-dark', size = 1100, depth = true }) {
+window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQuestions, isFinal = false, tone = 'serif-dark', size = 1100, depth = true }) {
   const sectors = window.TAXONOMY.sectors;
   const rings = window.TAXONOMY.rings;
   const cx = size / 2, cy = size / 2;
@@ -243,25 +243,21 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
           <circle cx={cx} cy={cy} r={size * 0.024} fill="none"
             stroke={theme.coreGlow} strokeOpacity="0.6" strokeWidth="1" />
 
-          {/* Reasoning-path polyline: black trail spirals from the rim
-              toward the centre. One vertex per answered question. Labels
-              extend radially outward so they never stack. */}
-          {path.length > 0 && (() => {
-            // Build a smooth-ish polyline from (rim → first point → … → last → centre).
-            // Including the centre at the end visually anchors the journey
-            // toward the recommended technique.
-            const pts = [...path.map(p => [p.x, p.y]), [cx, cy]];
-            const d = pts.map((p, i) => (i === 0 ? `M ${p[0]} ${p[1]}` : `L ${p[0]} ${p[1]}`)).join(' ');
-            return (
-              <path d={d}
-                fill="none"
-                stroke="#000"
-                strokeOpacity="0.85"
-                strokeWidth={size * 0.0032}
-                strokeLinecap="round"
-                strokeLinejoin="round" />
-            );
-          })()}
+          {/* Reasoning-path polyline: black trail spirals from the rim,
+              one vertex per answered question. Labels extend radially
+              outward so they never stack. The line is NEVER closed onto
+              the centre — the focused sector at the top of the disc is
+              the only "destination" cue. */}
+          {path.length > 1 && (
+            <polyline
+              points={path.map(p => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke="#000"
+              strokeOpacity="0.85"
+              strokeWidth={size * 0.0032}
+              strokeLinecap="round"
+              strokeLinejoin="round" />
+          )}
           {path.map((p, i) => (
             <g key={`pp-${i}`}>
               <circle cx={p.x} cy={p.y} r={size * 0.014}
@@ -286,28 +282,9 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                 strokeLinejoin="round">{p.label}</text>
             </g>
           ))}
-          {/* Destination badge in the centre: the current leading technique.
-              Shows up as soon as there is at least one answered question. */}
-          {leaderInfo && (
-            <g>
-              <circle cx={cx} cy={cy} r={size * 0.045}
-                fill={`oklch(0.55 0.22 ${leaderInfo.hue})`}
-                stroke="#fff" strokeWidth={size * 0.003}
-                opacity="0.95" />
-              <text x={cx} y={cy - size * 0.005}
-                fill="#fff" fontSize={size * 0.014}
-                fontFamily={theme.serif}
-                textAnchor="middle"
-                paintOrder="stroke" stroke="#000" strokeWidth={size * 0.003}
-                fontWeight={600}>{leaderInfo.label}</text>
-              <text x={cx} y={cy + size * 0.013}
-                fill="#fff" fontSize={size * 0.0105}
-                fontFamily={theme.serif}
-                fontStyle="italic"
-                textAnchor="middle"
-                paintOrder="stroke" stroke="#000" strokeWidth={size * 0.0025}>{leaderInfo.sub}</text>
-            </g>
-          )}
+          {/* Centre intentionally NOT marked: the running recommendation is
+              communicated by the rotating disc (focused sector at the top)
+              and by the spiral path of vertices, not by a central badge. */}
         </svg>
       </div>
     </div>

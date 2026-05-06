@@ -766,6 +766,26 @@ body { background: #02030a; color: #e8eeff; }
   .chat-rail { top: 70px; bottom: 12px; }
   .chat-rail-window { width: min(86vw, 360px); }
 }
+/* On phones the chat fills the bottom half of the screen when open, so
+   the recommendation above remains visible (don't take the entire viewport). */
+@media (max-width: 560px) {
+  .chat-rail { top: auto; bottom: 0; left: 0; right: 0; }
+  .chat-rail-toggle {
+    border-radius: 8px 8px 0 0;
+    border: 1px solid rgba(155,176,216,0.3);
+    border-bottom: none;
+    width: 100%;
+  }
+  .chat-rail-toggle-label { writing-mode: horizontal-tb; }
+  .chat-rail-window {
+    width: 100vw;
+    height: 60vh;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid rgba(155,176,216,0.25);
+    border-bottom: none;
+  }
+  .guide-app.chat-on .result-inner { padding-bottom: 60vh; }
+}
 
 .chat-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -887,9 +907,52 @@ body { background: #02030a; color: #e8eeff; }
 .chat-input-row {
   border-top: 1px solid rgba(155, 176, 216, 0.18);
   padding: 10px 12px;
-  display: flex; gap: 8px;
+  display: flex; gap: 8px; align-items: stretch;
   background: rgba(8, 12, 28, 0.7);
 }
+.chat-help-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(79, 124, 255, 0.85);
+  color: #fff;
+  border: 1px solid rgba(207, 225, 255, 0.6);
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: grab;
+  align-self: center;
+  display: inline-flex; align-items: center; justify-content: center;
+  user-select: none;
+  touch-action: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.chat-help-icon:hover { transform: scale(1.08); box-shadow: 0 0 12px rgba(79,124,255,0.7); }
+.chat-help-icon:active { cursor: grabbing; }
+
+/* Floating ghost while dragging */
+.chat-help-ghost {
+  position: fixed;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(79, 124, 255, 0.95);
+  color: #fff;
+  font-family: var(--serif); font-size: 22px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4), 0 0 18px rgba(79,124,255,0.7);
+  border: 2px solid #fff;
+}
+
+/* While dragging, show a subtle outline on the element under the pointer */
+body.atlas-help-dragging * { cursor: copy !important; }
+.atlas-help-target {
+  outline: 2px dashed #4f7cff !important;
+  outline-offset: 4px !important;
+  background-color: rgba(79,124,255,0.08) !important;
+}
+
 .chat-input-row textarea {
   flex: 1;
   background: rgba(20, 30, 60, 0.5);
