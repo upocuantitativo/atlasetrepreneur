@@ -688,15 +688,16 @@ body { background: #02030a; color: #e8eeff; }
 .tone-editorial .author-why { color: #5e6680; }
 .tone-editorial .author-link { color: #c0392b; }
 
-/* ==== Chat rail — docked on the right side, ABOVE the dialog bar ====
-   The rail occupies the right gutter on wide screens and stops short of
-   the bottom dialog so that question options are never covered. On narrow
-   screens it collapses to a floating overlay above the mandala only. */
+/* ==== Chat rail — docked on the right side ====
+   The dialog bar already shrinks horizontally via --chat-gutter when the
+   chat is open, so the rail can use the full vertical space on the right
+   without ever covering the bottom dialog options. On narrow screens it
+   collapses to a smaller overlay. */
 .chat-rail {
   position: fixed;
-  top: 200px;
+  top: 90px;
   right: 0;
-  bottom: 65vh;             /* leave the bottom 65vh free for the dialog */
+  bottom: 16px;
   z-index: 30;
   display: flex;
   align-items: stretch;
@@ -746,7 +747,7 @@ body { background: #02030a; color: #e8eeff; }
   .chat-rail-window { width: 320px; }
 }
 @media (max-width: 820px) {
-  .chat-rail { top: 80px; bottom: 70vh; }
+  .chat-rail { top: 70px; bottom: 12px; }
   .chat-rail-window { width: min(86vw, 360px); }
 }
 
@@ -940,9 +941,14 @@ body { background: #02030a; color: #e8eeff; }
 .tone-editorial .chat-send { background: #1a2540; }
 .tone-editorial .chat-send:hover:not(:disabled) { background: #0e1530; }
 
-/* When chat is open on the result screen, leave room on the right.
-   --chat-gutter is 0 when the chat is closed or the viewport is too narrow. */
-.guide-app .result-inner { padding-right: calc(48px + var(--chat-gutter)); }
+/* When chat is open on the result screen, leave room on the right by
+   shrinking the OUTER scroll container instead of pushing padding inward.
+   That way the result content always uses every available pixel. */
+.guide-app .result-screen { right: var(--chat-gutter); transition: right 0.25s ease; }
+.guide-app .result-inner { max-width: 1320px; margin: 0 auto; padding: 56px 48px 120px; }
+@media (max-width: 720px) {
+  .guide-app .result-inner { padding: 40px 20px 80px; }
+}
 
 /* Mini-map shrinks if it would collide with the chat toggle */
 @media (max-width: 820px) {

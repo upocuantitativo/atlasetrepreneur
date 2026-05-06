@@ -1,31 +1,24 @@
 // DialogBar — fixed bottom dialog. Question text + multiple-choice
-// buttons + free-text nuance field. Emits onAnswer({ optionIdx, note }).
+// buttons. Emits onAnswer({ optionIdx }).
 
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect } = React;
 
 window.DialogBar = function DialogBar({ question, qIndex, total, onAnswer, onBack, history, tone = 'serif-dark' }) {
   const [hovered, setHovered] = useState(null);
-  const [note, setNote] = useState('');
-  const [showNote, setShowNote] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(null);
-  const noteRef = useRef(null);
 
-  // Reset when question changes
   useEffect(() => {
     setSelectedIdx(null);
-    setNote('');
-    setShowNote(false);
   }, [question?.id]);
 
   if (!question) return null;
 
   const submit = (idx) => {
-    onAnswer({ optionIdx: idx, note: note.trim() });
+    onAnswer({ optionIdx: idx });
   };
 
   const handleSelect = (idx) => {
     setSelectedIdx(idx);
-    // Slight delay so user sees the selection animation, then advance.
     setTimeout(() => submit(idx), 280);
   };
 
@@ -66,27 +59,7 @@ window.DialogBar = function DialogBar({ question, qIndex, total, onAnswer, onBac
           <button className="dialog-back" onClick={onBack} disabled={qIndex === 0}>
             ← Back
           </button>
-          <button
-            className="dialog-note-toggle"
-            onClick={() => {
-              setShowNote(s => !s);
-              setTimeout(() => noteRef.current?.focus(), 50);
-            }}>
-            {showNote ? '— hide nuance' : '+ add nuance'}
-          </button>
         </div>
-
-        {showNote && (
-          <div className="dialog-note">
-            <textarea
-              ref={noteRef}
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Add a qualifier, caveat, or context (optional)…"
-              rows={2}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
