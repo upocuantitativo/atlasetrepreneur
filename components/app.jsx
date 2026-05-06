@@ -179,7 +179,7 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
           <div className="brand">
             <div className="brand-mark">◉</div>
             <div className="brand-text">
-              <div className="brand-title">Method Atlas <span className="brand-em">Entrepreneur</span></div>
+              <div className="brand-title">Method Atlas <span className="brand-em">Entrepreneur Research</span></div>
               <div className="brand-sub">A guided path to your analytic technique</div>
             </div>
           </div>
