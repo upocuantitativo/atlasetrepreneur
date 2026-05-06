@@ -293,29 +293,20 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
           <circle cx={cx} cy={cy} r={size * 0.024} fill="none"
             stroke={theme.coreGlow} strokeOpacity="0.6" strokeWidth="1" />
 
-          {/* Path overlay rendered on a SEPARATE layer below — kept out of
-              the tilted plane so the trail is always visible head-on. */}
-        </svg>
-      </div>
-
-      {/* Reasoning path: separate layer that ROTATES with the disc but does
-          NOT inherit the X-tilt. This guarantees the entire itinerary is
-          visible no matter which sector is in focus. */}
-      <div
-        className="mandala-path-layer"
-        style={{
-          width: size, height: size,
-          transform: `translate(-50%, -50%) rotateZ(${rotZ}deg)`,
-        }}
-      >
-        <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
+          {/* Reasoning-path polyline drawn DIRECTLY on the disc so the
+              vertices snap to the same rings the user sees: the first
+              vertex lands on the outer ring exactly because both the ring
+              circle and the vertex are computed at rOuter * 0.95 in the
+              same SVG coordinate space. The path inherits the disc's
+              X-tilt and Z-rotation, so it stays welded to the disc no
+              matter which sector is in focus. */}
           {path.length > 1 && (
             <polyline
               points={path.map(p => `${p.x},${p.y}`).join(' ')}
               fill="none"
               stroke="#000"
-              strokeOpacity="0.9"
-              strokeWidth={size * 0.004}
+              strokeOpacity="0.92"
+              strokeWidth={size * 0.0042}
               strokeLinecap="round"
               strokeLinejoin="round" />
           )}
@@ -331,8 +322,6 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                 textAnchor="middle"
                 fontWeight={700}
                 transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>{p.idx}</text>
-              {/* Counter-rotate so reading direction stays upright even
-                  though the layer rotates with the disc. */}
               <text
                 x={p.lx} y={p.ly}
                 fill="#fff"
