@@ -10,7 +10,7 @@
 
 const { useMemo } = React;
 
-window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, tone = 'serif-dark', size = 1100, depth = true }) {
+window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQuestions, tone = 'serif-dark', size = 1100, depth = true }) {
   const sectors = window.TAXONOMY.sectors;
   const rings = window.TAXONOMY.rings;
   const cx = size / 2, cy = size / 2;
@@ -30,26 +30,64 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, tone = 
     return { tiltX: 22, rotZ, zoom: ringZoom, translateY: 0 };
   }, [focusSector, focusRing, depth, sectors, size]);
 
-  // Polyline of the reasoning path. For each answered question we plot the
-  // sector that received the highest cumulative weight up to that moment,
-  // at the radius corresponding to that question's ring. Connecting the
-  // points draws the user's journey across the disc.
-  const path = useMemo(() => {
-    if (!history || history.length === 0) return [];
+  // Reasoning-path polyline. One vertex per answered question; the radius
+  // shrinks monotonically with each answer (outer rim → centre) so
+  // points NEVER overlap on the same circle. The angle at each step is the
+  // centroid of all cumulative sector scores, which produces an irregular,
+  // organic curve that bends toward whichever technique is leading.
+  // Labels are placed RADIALLY outward from each vertex to avoid stacking.
+  const { path, leaderInfo } = useMemo(() => {
+    if (!history || history.length === 0) return { path: [], leaderInfo: null };
     const acc = {};
-    return history.map((h, idx) => {
+    const rMax = rOuter * 0.92;
+    const rMin = rOuter * 0.08;
+    // Estimated total for the spiral. If the caller hasn't told us, use the
+    // number of questions in the bank; either way the path keeps tightening.
+    const expected = Math.max(history.length, totalQuestions || history.length);
+    const built = history.map((h, idx) => {
       Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
+      // centroid angle from all sectors with non-zero score (vector sum)
+      let sumX = 0, sumY = 0, totalScore = 0;
+      for (const sec of sectors) {
+        const score = acc[sec.id] || 0;
+        if (score <= 0) continue;
+        const ang = (sec.angle - 90) * Math.PI / 180;
+        sumX += score * Math.cos(ang);
+        sumY += score * Math.sin(ang);
+        totalScore += score;
+      }
+      const angleRad = totalScore > 0 ? Math.atan2(sumY, sumX) : -Math.PI / 2;
+      // Radius: each answer pulls us one notch closer to the centre.
+      const t = (idx + 1) / (expected + 0.6);  // never quite hits 1 mid-flow
+      const radius = rMax - (rMax - rMin) * t;
+      const x = cx + radius * Math.cos(angleRad);
+      const y = cy + radius * Math.sin(angleRad);
+      // Outward label position so multiple labels never stack on the same spot
+      const labelDist = size * 0.034;
+      const lx = cx + (radius + labelDist) * Math.cos(angleRad);
+      const ly = cy + (radius + labelDist) * Math.sin(angleRad);
+      // Anchor based on quadrant for clean readability
+      const cosA = Math.cos(angleRad), sinA = Math.sin(angleRad);
+      const anchor = cosA >  0.4 ? 'start' : cosA < -0.4 ? 'end' : 'middle';
+      const baseline = sinA >  0.5 ? 'hanging' : sinA < -0.5 ? 'auto' : 'middle';
+      // Dominant sector at this step (for colour cues)
       const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
       const leaderId = ranked.length ? ranked[0][0] : null;
       const sector = sectors.find(s => s.id === leaderId) || sectors[0];
-      const ring = rings[h.ring] || rings[0];
-      const radius = rOuter * ring.rNorm;
-      const a = (sector.angle - 90) * Math.PI / 180;
-      const x = cx + radius * Math.cos(a);
-      const y = cy + radius * Math.sin(a);
-      return { x, y, sectorId: sector.id, hue: sector.hue, label: shortAnswer(h.answerLabel), idx: idx + 1 };
+      return {
+        x, y, lx, ly, anchor, baseline,
+        sectorId: sector.id, hue: sector.hue,
+        label: shortAnswer(h.answerLabel),
+        idx: idx + 1,
+        isLast: idx === history.length - 1,
+      };
     });
-  }, [history, sectors, rings, rOuter, cx, cy]);
+    // Compute the destination badge (centre): current leading sector overall.
+    const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
+    const leaderId = ranked.length ? ranked[0][0] : null;
+    const leader = sectors.find(s => s.id === leaderId);
+    return { path: built, leaderInfo: leader ? { label: leader.label, hue: leader.hue, sub: leader.sub } : null };
+  }, [history, sectors, rings, rOuter, cx, cy, size, totalQuestions]);
 
   // Theme palette per tone.
   const theme = TONES[tone] || TONES['serif-dark'];
@@ -205,41 +243,71 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, tone = 
           <circle cx={cx} cy={cy} r={size * 0.024} fill="none"
             stroke={theme.coreGlow} strokeOpacity="0.6" strokeWidth="1" />
 
-          {/* Reasoning-path polyline: black trail, white labels with the
-              short answer at each vertex. */}
-          {path.length > 1 && (
-            <polyline
-              points={path.map(p => `${p.x},${p.y}`).join(' ')}
-              fill="none"
-              stroke="#000"
-              strokeOpacity="0.85"
-              strokeWidth={size * 0.0035}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
+          {/* Reasoning-path polyline: black trail spirals from the rim
+              toward the centre. One vertex per answered question. Labels
+              extend radially outward so they never stack. */}
+          {path.length > 0 && (() => {
+            // Build a smooth-ish polyline from (rim → first point → … → last → centre).
+            // Including the centre at the end visually anchors the journey
+            // toward the recommended technique.
+            const pts = [...path.map(p => [p.x, p.y]), [cx, cy]];
+            const d = pts.map((p, i) => (i === 0 ? `M ${p[0]} ${p[1]}` : `L ${p[0]} ${p[1]}`)).join(' ');
+            return (
+              <path d={d}
+                fill="none"
+                stroke="#000"
+                strokeOpacity="0.85"
+                strokeWidth={size * 0.0032}
+                strokeLinecap="round"
+                strokeLinejoin="round" />
+            );
+          })()}
           {path.map((p, i) => (
             <g key={`pp-${i}`}>
-              <circle cx={p.x} cy={p.y} r={size * 0.018} fill="#000" stroke="#fff" strokeWidth={size * 0.0025} />
+              <circle cx={p.x} cy={p.y} r={size * 0.014}
+                fill="#000" stroke="#fff" strokeWidth={size * 0.002} />
               <text
-                x={p.x} y={p.y + size * 0.005}
+                x={p.x} y={p.y + size * 0.004}
                 fill="#fff"
-                fontSize={size * 0.012}
+                fontSize={size * 0.011}
                 fontFamily={theme.serif}
                 textAnchor="middle"
                 fontWeight={600}>{p.idx}</text>
               <text
-                x={p.x} y={p.y - size * 0.028}
+                x={p.lx} y={p.ly}
                 fill="#fff"
-                fontSize={size * 0.0135}
+                fontSize={size * 0.013}
                 fontFamily={theme.serif}
-                textAnchor="middle"
+                textAnchor={p.anchor}
+                dominantBaseline={p.baseline}
                 paintOrder="stroke"
                 stroke="#000"
-                strokeWidth={size * 0.003}
+                strokeWidth={size * 0.0035}
                 strokeLinejoin="round">{p.label}</text>
             </g>
           ))}
+          {/* Destination badge in the centre: the current leading technique.
+              Shows up as soon as there is at least one answered question. */}
+          {leaderInfo && (
+            <g>
+              <circle cx={cx} cy={cy} r={size * 0.045}
+                fill={`oklch(0.55 0.22 ${leaderInfo.hue})`}
+                stroke="#fff" strokeWidth={size * 0.003}
+                opacity="0.95" />
+              <text x={cx} y={cy - size * 0.005}
+                fill="#fff" fontSize={size * 0.014}
+                fontFamily={theme.serif}
+                textAnchor="middle"
+                paintOrder="stroke" stroke="#000" strokeWidth={size * 0.003}
+                fontWeight={600}>{leaderInfo.label}</text>
+              <text x={cx} y={cy + size * 0.013}
+                fill="#fff" fontSize={size * 0.0105}
+                fontFamily={theme.serif}
+                fontStyle="italic"
+                textAnchor="middle"
+                paintOrder="stroke" stroke="#000" strokeWidth={size * 0.0025}>{leaderInfo.sub}</text>
+            </g>
+          )}
         </svg>
       </div>
     </div>

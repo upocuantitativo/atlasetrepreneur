@@ -145,7 +145,7 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
 
   return (
     <div className={`guide-app tone-${tone} ${chatOpen ? 'chat-on' : 'chat-off'}`}>
-      <window.Mandala3D focusSector={focusSector} focusRing={focusRing} history={history} tone={tone} />
+      <window.Mandala3D focusSector={focusSector} focusRing={focusRing} history={history} totalQuestions={total} tone={tone} />
 
       {focusSectorObj && history.length >= 3 && (
         <div className="sector-hud">
