@@ -45,10 +45,16 @@ body { background: #f5f4ef; color: #1a1a1a; }
   width: min(95vmin, 1150px) !important;
   height: min(95vmin, 1150px) !important;
 }
-/* Path layer: same size, sits on top of the plane, only rotates with Z so
-   the spiral is always visible head-on (never lost behind the X-tilt). */
+/* Path layer: identical size to the disc, centred over the plane.
+   Critical: top/left:50% + translate(-50%,-50%) inside the inline style
+   ensure the layer's geometric centre coincides with the disc's centre,
+   so vertices computed in disc coordinates land on the right rings.
+   The 30px offset compensates for the stage's padding-top:60px (flex
+   centering puts the disc 30px below the stage's geometric centre). */
 .mandala-path-layer {
   position: absolute;
+  top: calc(50% + 30px);
+  left: 50%;
   width: min(95vmin, 1150px) !important;
   height: min(95vmin, 1150px) !important;
   pointer-events: none;

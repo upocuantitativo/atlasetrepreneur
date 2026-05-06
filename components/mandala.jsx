@@ -274,7 +274,7 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
         className="mandala-path-layer"
         style={{
           width: size, height: size,
-          transform: `rotateZ(${rotZ}deg)`,
+          transform: `translate(-50%, -50%) rotateZ(${rotZ}deg)`,
         }}
       >
         <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
