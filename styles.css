@@ -45,6 +45,17 @@ body { background: #f5f4ef; color: #1a1a1a; }
   width: min(95vmin, 1150px) !important;
   height: min(95vmin, 1150px) !important;
 }
+/* Path layer: same size, sits on top of the plane, only rotates with Z so
+   the spiral is always visible head-on (never lost behind the X-tilt). */
+.mandala-path-layer {
+  position: absolute;
+  width: min(95vmin, 1150px) !important;
+  height: min(95vmin, 1150px) !important;
+  pointer-events: none;
+  transition: transform 1.4s cubic-bezier(.22,.8,.22,1);
+  transform-origin: 50% 50%;
+}
+.mandala-path-layer svg { width: 100%; height: 100%; overflow: visible; }
 .mandala-atmo { position: absolute; inset: 0; pointer-events: none; }
 .mandala-stars {
   position: absolute; inset: 0; pointer-events: none; opacity: 0.35;

@@ -16,18 +16,17 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   const cx = size / 2, cy = size / 2;
   const rOuter = size * 0.46;
 
-  // Camera params: gentle frontal tilt, with the focused sector rotated to
-  // the TOP (north / 12 o'clock) so the user reads "you are heading here".
+  // Camera params: very gentle tilt (the disc is almost frontal) so the
+  // itinerary drawn on top remains as readable as possible regardless of
+  // which sector is in focus. Rotation places the focused sector at the
+  // TOP / 12 o'clock so the user reads "you are heading here".
   const { tiltX, rotZ, zoom, translateY } = useMemo(() => {
     if (!depth) return { tiltX: 0, rotZ: 0, zoom: 1, translateY: 0 };
-    if (!focusSector) return { tiltX: 18, rotZ: 0, zoom: 1, translateY: 0 };
+    if (!focusSector) return { tiltX: 8, rotZ: 0, zoom: 1, translateY: 0 };
     const s = sectors.find(s => s.id === focusSector);
-    if (!s) return { tiltX: 18, rotZ: 0, zoom: 1, translateY: 0 };
-    // SVG-angle 0° = top of the disc. Rotate so the focused sector lands at
-    // angle 0°: rotZ = -s.angle (mod 360).
+    if (!s) return { tiltX: 8, rotZ: 0, zoom: 1, translateY: 0 };
     const rotZ = ((-s.angle) + 360) % 360;
-    const ringZoom = focusRing == null ? 1 : 1 + (focusRing * 0.06);
-    return { tiltX: 22, rotZ, zoom: ringZoom, translateY: 0 };
+    return { tiltX: 8, rotZ, zoom: 1, translateY: 0 };
   }, [focusSector, focusRing, depth, sectors, size]);
 
   // Reasoning-path polyline. One vertex per answered question; the radius
@@ -243,18 +242,29 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
           <circle cx={cx} cy={cy} r={size * 0.024} fill="none"
             stroke={theme.coreGlow} strokeOpacity="0.6" strokeWidth="1" />
 
-          {/* Reasoning-path polyline: black trail spirals from the rim,
-              one vertex per answered question. Labels extend radially
-              outward so they never stack. The line is NEVER closed onto
-              the centre — the focused sector at the top of the disc is
-              the only "destination" cue. */}
+          {/* Path overlay rendered on a SEPARATE layer below — kept out of
+              the tilted plane so the trail is always visible head-on. */}
+        </svg>
+      </div>
+
+      {/* Reasoning path: separate layer that ROTATES with the disc but does
+          NOT inherit the X-tilt. This guarantees the entire itinerary is
+          visible no matter which sector is in focus. */}
+      <div
+        className="mandala-path-layer"
+        style={{
+          width: size, height: size,
+          transform: `rotateZ(${rotZ}deg)`,
+        }}
+      >
+        <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
           {path.length > 1 && (
             <polyline
               points={path.map(p => `${p.x},${p.y}`).join(' ')}
               fill="none"
               stroke="#000"
-              strokeOpacity="0.85"
-              strokeWidth={size * 0.0032}
+              strokeOpacity="0.9"
+              strokeWidth={size * 0.0036}
               strokeLinecap="round"
               strokeLinejoin="round" />
           )}
@@ -269,6 +279,8 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                 fontFamily={theme.serif}
                 textAnchor="middle"
                 fontWeight={600}>{p.idx}</text>
+              {/* Counter-rotate the label so reading direction stays upright
+                  even though the layer itself is rotated with the disc. */}
               <text
                 x={p.lx} y={p.ly}
                 fill="#fff"
@@ -279,12 +291,12 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                 paintOrder="stroke"
                 stroke="#000"
                 strokeWidth={size * 0.0035}
-                strokeLinejoin="round">{p.label}</text>
+                strokeLinejoin="round"
+                transform={`rotate(${-rotZ}, ${p.lx}, ${p.ly})`}>
+                {p.label}
+              </text>
             </g>
           ))}
-          {/* Centre intentionally NOT marked: the running recommendation is
-              communicated by the rotating disc (focused sector at the top)
-              and by the spiral path of vertices, not by a central badge. */}
         </svg>
       </div>
     </div>
