@@ -61,7 +61,7 @@ questionnaire and on the result screen. It can be hidden / shown without
 disturbing the question dialog.
 
 The chat talks to a local **Ollama** instance over its REST API. Default
-model: `llama3.1:8b-instruct-q4_K_M`. Suggested alternatives:
+model: `llama3.1:8b`. Suggested alternatives:
 `mistral:7b-instruct`, `qwen2.5:7b-instruct`, `qwen2.5:14b-instruct`,
 `gemma2:9b-instruct`, `phi3:medium-128k-instruct`.
 
@@ -73,7 +73,7 @@ model: `llama3.1:8b-instruct-q4_K_M`. Suggested alternatives:
 #    Windows: same installer
 
 # 2. Pull a model
-ollama pull llama3.1:8b-instruct-q4_K_M
+ollama pull llama3.1:8b
 
 # 3. Start the daemon with browser CORS allowed
 #    macOS / Linux:

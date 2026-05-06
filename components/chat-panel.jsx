@@ -11,16 +11,16 @@
 //   - the live context: which question the user is on, or which technique
 //     was recommended
 //
-// Default model: 'llama3.1:8b-instruct-q4_K_M'. The user can override URL and
+// Default model: 'llama3.1:8b'. The user can override URL and
 // model from the gear icon. State persists in localStorage.
 
 const { useState, useRef, useEffect } = React;
 
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
-const DEFAULT_MODEL = 'llama3.1:8b-instruct-q4_K_M';
+const DEFAULT_MODEL = 'llama3.1:8b';
 
 const SUGGESTED_MODELS = [
-  'llama3.1:8b-instruct-q4_K_M',
+  'llama3.1:8b',
   'llama3.1:70b-instruct-q4_K_M',
   'mistral:7b-instruct',
   'qwen2.5:7b-instruct',
