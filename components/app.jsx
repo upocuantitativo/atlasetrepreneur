@@ -20,9 +20,11 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
   // dynamically.
   const [history, setHistory] = useState([]);
   const [done, setDone] = useState(false);
+  // Chat is CLOSED by default. The user opens it explicitly via the "Ask"
+  // pill (or the floating button on phones). Their choice is remembered.
   const [chatOpen, setChatOpen] = useState(() => {
     const v = localStorage.getItem('atlas_chat_open');
-    return v == null ? true : v === '1';
+    return v === '1';
   });
 
   useEffect(() => {
@@ -30,11 +32,12 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
   }, [chatOpen]);
 
   // When the user reaches the recommendation, force the consultation chat
-  // open so they can immediately ask follow-up questions about the
-  // recommended technique. Works on desktop and mobile (responsive CSS
-  // already adapts the rail width on small viewports).
+  // open ON DESKTOP so they can immediately ask follow-up questions. On
+  // phones we leave the FAB visible instead so the result stays readable.
   useEffect(() => {
-    if (done) setChatOpen(true);
+    if (done && window.matchMedia && window.matchMedia('(min-width: 760px)').matches) {
+      setChatOpen(true);
+    }
   }, [done]);
 
   const allQuestions = window.QUESTIONS;

@@ -143,6 +143,7 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
             <div className="chat-header-actions">
               <button className="chat-icon-btn" onClick={() => setShowSettings(s => !s)} title="Endpoint & model">⚙</button>
               <button className="chat-icon-btn" onClick={reset} title="Clear conversation">↺</button>
+              <button className="chat-icon-btn chat-close-btn" onClick={onToggle} title="Close consultation">×</button>
             </div>
           </div>
 
