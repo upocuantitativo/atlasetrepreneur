@@ -32,17 +32,42 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   const { path, leaderInfo } = useMemo(() => {
     if (!history || history.length === 0) return { path: [], leaderInfo: null };
     const acc = {};
-    // First vertex lands exactly ON the outer "Analytical goal" ring
-    // (rNorm 0.95) — i.e. the answer to the first question is plotted at
-    // its corresponding sector on the outermost band, not floating beyond
-    // the disc. The trail then walks inward across the data and
-    // assumptions bands until it touches the inner ring.
-    const ringOuterR = (rings[0] && typeof rings[0].rNorm === 'number') ? rings[0].rNorm : 0.95;
-    const ringInnerR = (rings[rings.length - 1] && typeof rings[rings.length - 1].rNorm === 'number')
-                        ? rings[rings.length - 1].rNorm : 0.35;
-    const rMax = rOuter * ringOuterR;          // outer ring = where Q1 sits
-    const rMin = rOuter * Math.max(0.10, ringInnerR * 0.30);  // well inside the inner ring
-    const expected = Math.max(history.length, totalQuestions || history.length);
+
+    // Three concentric BANDS, one per ring:
+    //   ring 0 (Analytical goal)   → outermost band, anchored on the outer ring
+    //   ring 1 (Data structure)    → middle band, anchored on the middle ring
+    //   ring 2 (Assumptions)       → innermost band, anchored on the inner ring
+    // Each answered question gets its own sub-radius within its ring's band
+    // (chronological order of that ring's answers).  This gives the user the
+    // visual story they asked for: goal questions on the outside, data
+    // questions in the middle, assumption questions near the centre — and
+    // multiple questions of the same type stack as concentric sub-circles.
+    const r0 = rings[0] ? rings[0].rNorm : 0.95;
+    const r1 = rings[1] ? rings[1].rNorm : 0.65;
+    const r2 = rings[2] ? rings[2].rNorm : 0.35;
+    const ringBands = [
+      { outer: r0,            inner: (r0 + r1) / 2 },     // ring 0 band
+      { outer: (r0 + r1) / 2, inner: (r1 + r2) / 2 },     // ring 1 band
+      { outer: (r1 + r2) / 2, inner: Math.max(0.06, r2 * 0.25) }, // ring 2 band
+    ];
+
+    // Count how many questions exist per ring in the bank (for sub-radius
+    // spacing). Falls back to history-only counts if the bank isn't loaded.
+    const expectedPerRing = [0, 0, 0];
+    const bank = (window.QUESTIONS || []);
+    bank.forEach(q => {
+      const r = Math.max(0, Math.min(2, q.ring ?? 0));
+      expectedPerRing[r]++;
+    });
+    if (expectedPerRing.every(n => n === 0)) {
+      history.forEach(h => {
+        const r = Math.max(0, Math.min(2, h.ring ?? 0));
+        expectedPerRing[r]++;
+      });
+    }
+
+    const ringSlot = [0, 0, 0];
+
     const built = history.map((h, idx) => {
       Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
       // centroid angle from all sectors with non-zero score (vector sum)
@@ -56,14 +81,19 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
         totalScore += score;
       }
       const angleRad = totalScore > 0 ? Math.atan2(sumY, sumX) : -Math.PI / 2;
-      // Radius: linear shrink from rMax to rMin across the expected total.
-      // Each answer moves the trail one full step inward — rim → centre.
-      const denom = Math.max(1, expected - 1);
-      const t = idx / denom;     // 0 for first answer, 1 for last
-      const radius = rMax - (rMax - rMin) * t;
+
+      // Radius from this question's ring band + sub-slot
+      const ring = Math.max(0, Math.min(2, h.ring ?? 0));
+      const band = ringBands[ring];
+      const slot = ringSlot[ring];
+      ringSlot[ring]++;
+      const total = Math.max(1, expectedPerRing[ring]);
+      const sub = total > 1 ? slot / (total - 1) : 0;            // 0 (outer of band) → 1 (inner of band)
+      const radiusNorm = band.outer - (band.outer - band.inner) * sub;
+      const radius = rOuter * radiusNorm;
+
       const x = cx + radius * Math.cos(angleRad);
       const y = cy + radius * Math.sin(angleRad);
-      // Outward label position so labels never stack on the same spot
       const labelDist = size * 0.045;
       const lx = cx + (radius + labelDist) * Math.cos(angleRad);
       const ly = cy + (radius + labelDist) * Math.sin(angleRad);
@@ -78,6 +108,7 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
         sectorId: sector.id, hue: sector.hue,
         label: shortAnswer(h.answerLabel),
         idx: idx + 1,
+        ring,
         isLast: idx === history.length - 1,
       };
     });
