@@ -16,17 +16,16 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   const cx = size / 2, cy = size / 2;
   const rOuter = size * 0.46;
 
-  // Camera params: very gentle tilt (the disc is almost frontal) so the
-  // itinerary drawn on top remains as readable as possible regardless of
-  // which sector is in focus. Rotation places the focused sector at the
-  // TOP / 12 o'clock so the user reads "you are heading here".
+  // Camera params: visible 3D tilt so the disc clearly rotates as the
+  // focus shifts. The reasoning trail lives on a separate layer that
+  // does NOT inherit the X-tilt, so the path stays head-on regardless.
   const { tiltX, rotZ, zoom, translateY } = useMemo(() => {
     if (!depth) return { tiltX: 0, rotZ: 0, zoom: 1, translateY: 0 };
-    if (!focusSector) return { tiltX: 8, rotZ: 0, zoom: 1, translateY: 0 };
+    if (!focusSector) return { tiltX: 24, rotZ: 0, zoom: 1, translateY: 0 };
     const s = sectors.find(s => s.id === focusSector);
-    if (!s) return { tiltX: 8, rotZ: 0, zoom: 1, translateY: 0 };
+    if (!s) return { tiltX: 24, rotZ: 0, zoom: 1, translateY: 0 };
     const rotZ = ((-s.angle) + 360) % 360;
-    return { tiltX: 8, rotZ, zoom: 1, translateY: 0 };
+    return { tiltX: 28, rotZ, zoom: 1, translateY: 0 };
   }, [focusSector, focusRing, depth, sectors, size]);
 
   // Reasoning-path polyline. One vertex per answered question; the radius
@@ -38,11 +37,16 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   const { path, leaderInfo } = useMemo(() => {
     if (!history || history.length === 0) return { path: [], leaderInfo: null };
     const acc = {};
-    // The spiral spans almost the full radius — first vertex on the outer
-    // rim, last vertex very close to the centre — so the rim→centre
-    // direction is unmistakable.
-    const rMax = rOuter * 0.96;
-    const rMin = rOuter * 0.04;
+    // First vertex lands exactly ON the outer "Analytical goal" ring
+    // (rNorm 0.95) — i.e. the answer to the first question is plotted at
+    // its corresponding sector on the outermost band, not floating beyond
+    // the disc. The trail then walks inward across the data and
+    // assumptions bands until it touches the inner ring.
+    const ringOuterR = (rings[0] && typeof rings[0].rNorm === 'number') ? rings[0].rNorm : 0.95;
+    const ringInnerR = (rings[rings.length - 1] && typeof rings[rings.length - 1].rNorm === 'number')
+                        ? rings[rings.length - 1].rNorm : 0.35;
+    const rMax = rOuter * ringOuterR;          // outer ring = where Q1 sits
+    const rMin = rOuter * Math.max(0.10, ringInnerR * 0.30);  // well inside the inner ring
     const expected = Math.max(history.length, totalQuestions || history.length);
     const built = history.map((h, idx) => {
       Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
