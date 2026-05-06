@@ -8,7 +8,13 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: var(--serif); }
-body { background: #02030a; color: #e8eeff; }
+/* Body bg matches the editorial tone (the default on this site). The
+   mandala-stage covers it anyway, but if any gap ever appears at the
+   edges (e.g. behind the translucent chat), the user sees a soft
+   off-white instead of pure black. */
+body { background: #f5f4ef; color: #1a1a1a; }
+.guide-app.tone-serif-dark { background: #02030a; color: #e8eeff; }
+.guide-app.tone-serif-paper { background: #f7f1e3; color: #1a1208; }
 
 #root, .guide-app {
   width: 100vw; height: 100vh; height: 100dvh;
@@ -21,16 +27,17 @@ body { background: #02030a; color: #e8eeff; }
 @media (max-width: 820px)  { .guide-app.chat-on { --chat-gutter: 0px; } }
 
 /* ==== Mandala stage ==== */
+/* The mandala fills the FULL viewport regardless of chat state, so the
+   translucent chat panel sits on top of the disc itself (not on top of
+   the body's dark background, which would look like a black plate). */
 .mandala-stage {
   position: absolute; inset: 0;
-  right: var(--chat-gutter);
   perspective: 2800px;
   perspective-origin: 50% 50%;
   background: var(--mandala-bg);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
   padding-top: 60px;
-  transition: right 0.25s ease;
 }
 .mandala-plane {
   /* Scale the disc up so it fills more of the viewport without bleeding past
