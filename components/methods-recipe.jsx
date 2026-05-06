@@ -55,11 +55,12 @@ window.MethodsRecipe = function MethodsRecipe({ winner, history, scores }) {
   return (
     <div className="recipe-block">
       <div className="result-eyebrow">Replicable methods recipe</div>
-      <h2 className="recipe-title">A graduate student should be able to follow this.</h2>
+      <h2 className="recipe-title">A researcher should be able to follow this.</h2>
       <p className="recipe-lede">
-        Below is a tailored 9-step pipeline based on your answers — the kind
-        of step-by-step protocol that converts a methods <em>description</em>
-        into a methods <em>contribution</em>. Pair it with shared code or
+        Below is a tailored nine-step pipeline based on your answers — the
+        kind of replicable protocol that lets a fellow researcher reproduce
+        your design and that converts a methods <em>description</em> into a
+        methods <em>contribution</em>. Pair it with shared code or
         pseudocode in supplementary material.
       </p>
       <ol className="recipe-list">

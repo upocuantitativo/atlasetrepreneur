@@ -10,7 +10,15 @@
 html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: var(--serif); }
 body { background: #02030a; color: #e8eeff; }
 
-#root, .guide-app { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+#root, .guide-app {
+  width: 100vw; height: 100vh; height: 100dvh;
+  position: relative; overflow: hidden;
+  /* Layout reserves a right gutter for the chat rail when it is open. */
+  --chat-gutter: 0px;
+}
+.guide-app.chat-on { --chat-gutter: 400px; }
+@media (max-width: 1100px) { .guide-app.chat-on { --chat-gutter: 340px; } }
+@media (max-width: 820px)  { .guide-app.chat-on { --chat-gutter: 0px; } }
 
 /* ==== Mandala stage ==== */
 .mandala-stage {
@@ -135,13 +143,20 @@ body { background: #02030a; color: #e8eeff; }
 
 /* ==== Dialog bar ==== */
 .dialog-bar {
-  width: 100%;
+  width: calc(100% - var(--chat-gutter));
+  max-height: 65vh;
+  overflow-y: auto;
   background: linear-gradient(180deg, rgba(2, 4, 14, 0) 0%, rgba(2, 4, 14, 0.85) 30%, rgba(2, 4, 14, 0.95) 100%);
-  padding: 60px 0 32px;
+  padding: 36px 0 28px;
   backdrop-filter: blur(2px);
+  transition: width 0.25s ease;
 }
 .dialog-rail {
   max-width: 980px; margin: 0 auto; padding: 0 36px;
+}
+@media (max-width: 820px) {
+  .dialog-bar { max-height: 70vh; padding: 22px 0 22px; }
+  .dialog-rail { padding: 0 18px; }
 }
 .dialog-meta {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -159,7 +174,8 @@ body { background: #02030a; color: #e8eeff; }
 
 .dialog-question {
   font-family: var(--serif);
-  font-size: 38px; line-height: 1.15; font-weight: 400;
+  font-size: clamp(22px, 2.6vw, 36px);
+  line-height: 1.15; font-weight: 400;
   color: #f1f4ff;
   margin-bottom: 6px;
   text-wrap: pretty;
@@ -172,17 +188,17 @@ body { background: #02030a; color: #e8eeff; }
 }
 
 .dialog-options {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px; margin-top: 20px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px; margin-top: 14px;
 }
 .opt-btn {
-  display: flex; align-items: flex-start; gap: 12px;
+  display: flex; align-items: flex-start; gap: 10px;
   background: rgba(20, 30, 60, 0.5);
   border: 1px solid rgba(155, 176, 216, 0.25);
   border-radius: 4px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   color: #e8eeff; text-align: left;
-  font-family: var(--serif); font-size: 16px; line-height: 1.3;
+  font-family: var(--serif); font-size: 15px; line-height: 1.3;
   cursor: pointer; transition: all 0.2s ease;
 }
 .opt-btn:hover, .opt-btn.hover {
@@ -672,14 +688,18 @@ body { background: #02030a; color: #e8eeff; }
 .tone-editorial .author-why { color: #5e6680; }
 .tone-editorial .author-link { color: #c0392b; }
 
-/* ==== Chat rail — docked on the right side, below the mini-map ==== */
+/* ==== Chat rail — docked on the right side, ABOVE the dialog bar ====
+   The rail occupies the right gutter on wide screens and stops short of
+   the bottom dialog so that question options are never covered. On narrow
+   screens it collapses to a floating overlay above the mandala only. */
 .chat-rail {
   position: fixed;
-  top: 220px;
+  top: 200px;
   right: 0;
+  bottom: 65vh;             /* leave the bottom 65vh free for the dialog */
   z-index: 30;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   font-family: var(--serif);
   pointer-events: auto;
 }
@@ -696,6 +716,7 @@ body { background: #02030a; color: #e8eeff; }
   letter-spacing: 0.08em;
   transition: background 0.2s;
   backdrop-filter: blur(10px);
+  align-self: flex-start;   /* the toggle stays at the top of the rail */
 }
 .chat-rail-toggle:hover { background: rgba(40, 60, 120, 0.9); }
 .chat-rail-toggle-mark { font-size: 18px; line-height: 1; }
@@ -708,7 +729,7 @@ body { background: #02030a; color: #e8eeff; }
 }
 .chat-rail-window {
   width: 380px;
-  max-height: calc(100vh - 240px);
+  height: 100%;
   background: rgba(8, 12, 28, 0.92);
   border: 1px solid rgba(155, 176, 216, 0.25);
   border-radius: 8px 0 0 8px;
@@ -719,6 +740,15 @@ body { background: #02030a; color: #e8eeff; }
   overflow: hidden;
 }
 .chat-rail.closed .chat-rail-window { display: none; }
+
+/* On narrow screens the chat overlays the mandala instead of pushing it. */
+@media (max-width: 1100px) {
+  .chat-rail-window { width: 320px; }
+}
+@media (max-width: 820px) {
+  .chat-rail { top: 80px; bottom: 70vh; }
+  .chat-rail-window { width: min(86vw, 360px); }
+}
 
 .chat-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -775,11 +805,10 @@ body { background: #02030a; color: #e8eeff; }
 .chat-context-text { font-size: 13px; color: #cfe1ff; line-height: 1.4; }
 
 .chat-scroller {
-  flex: 1; overflow-y: auto;
+  flex: 1 1 auto; overflow-y: auto;
   padding: 14px 16px;
   display: flex; flex-direction: column; gap: 12px;
-  min-height: 200px;
-  max-height: 50vh;
+  min-height: 80px;
 }
 
 .chat-empty { color: #9bb0d8; font-style: italic; font-size: 14px; line-height: 1.5; }
@@ -911,12 +940,18 @@ body { background: #02030a; color: #e8eeff; }
 .tone-editorial .chat-send { background: #1a2540; }
 .tone-editorial .chat-send:hover:not(:disabled) { background: #0e1530; }
 
-/* When chat is open on the result screen, leave room on the right */
-.guide-app.chat-on .result-inner { padding-right: 420px; }
-@media (max-width: 1100px) {
-  .guide-app.chat-on .result-inner { padding-right: 48px; }
-  .chat-rail-window { width: 320px; }
+/* When chat is open on the result screen, leave room on the right.
+   --chat-gutter is 0 when the chat is closed or the viewport is too narrow. */
+.guide-app .result-inner { padding-right: calc(48px + var(--chat-gutter)); }
+
+/* Mini-map shrinks if it would collide with the chat toggle */
+@media (max-width: 820px) {
+  .mini-map { display: none; }
 }
-@media (max-width: 700px) {
-  .chat-rail-window { width: calc(100vw - 60px); }
+
+/* Brand block compresses on narrow screens */
+@media (max-width: 600px) {
+  .brand-text .brand-title { font-size: 18px; }
+  .brand-sub { display: none; }
+  .overlay-top { padding: 16px 18px; }
 }
