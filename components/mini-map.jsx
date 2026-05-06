@@ -34,7 +34,7 @@ window.MiniMap = function MiniMap({ focusSector, focusRing, scores, tone = 'seri
   // Short labels (compact for the mini-map)
   const SHORT = {
     anova: 'ANOVA', regression: 'REG/SEM', fsqca: 'fsQCA',
-    cluster: 'CLUSTER', trees: 'TREES', xai: 'XAI/EBM', deep: 'NEURAL',
+    cluster: 'CLUSTER', trees: 'TREES', xai: 'XAI/EBM', deep: 'DEEP LEARNING',
   };
 
   return (

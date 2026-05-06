@@ -343,8 +343,8 @@ window.TAXONOMY = {
     },
     {
       id: 'deep',
-      label: 'Neural Networks',
-      sub: 'Deep learning on rich data',
+      label: 'Deep Learning',
+      sub: 'Neural networks on rich data',
       angle: 315,
       hue: 210,
       techniques: ['MLP', 'CNN (vision)', 'RNN / LSTM', 'Transformers (BERT, LLM finetune)', 'Autoencoders'],
