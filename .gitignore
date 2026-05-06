@@ -1,0 +1,31 @@
+# Bibliography PDFs are not pushed (per project owner). Keep .docx digests.
+biblio/*.pdf
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Local artefacts
+node_modules/
+dist/
+build/
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sensitive
+.env
+.env.local
+*.ppk
+
+# Local working artefacts (not part of the app)
+.claude/
+uploads/
+ejemplo.png
