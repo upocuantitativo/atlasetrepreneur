@@ -37,12 +37,19 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiUrl, setApiUrl] = useState(
-    () => localStorage.getItem('atlas_api_url') || DEFAULT_API_URL
-  );
-  const [model, setModel] = useState(
-    () => localStorage.getItem('atlas_api_model') || DEFAULT_MODEL
-  );
+  const [apiUrl, setApiUrl] = useState(() => {
+    const stored = localStorage.getItem('atlas_api_url');
+    // Refuse stale Ollama-style URLs — the public site only works through
+    // the Groq-backed PHP proxy. Users in dev can still override from ⚙.
+    if (stored && /\/api\/chat\b/.test(stored)) return DEFAULT_API_URL;
+    return stored || DEFAULT_API_URL;
+  });
+  const [model, setModel] = useState(() => {
+    const stored = localStorage.getItem('atlas_api_model');
+    // Same: a leftover llama3.1:8b (Ollama tag) makes Groq 404. Force reset.
+    if (stored && /^llama3\.1:/.test(stored)) return DEFAULT_MODEL;
+    return stored || DEFAULT_MODEL;
+  });
   const [firstVisit, setFirstVisit] = useState(
     () => !localStorage.getItem('atlas_chat_seen')
   );
@@ -79,12 +86,17 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
     setMessages(next);
     setBusy(true);
     try {
+      // Keep only the last 8 messages to stay well under Groq's 6,000 TPM
+      // free-tier limit. The system prompt already carries the relevant
+      // technique context, so older chat history adds little value.
+      const trimmed = next.slice(-8);
       const reply = await callChat({
         url: apiUrl, model,
-        messages: [{ role: 'system', content: systemPrompt }, ...next],
+        messages: [{ role: 'system', content: systemPrompt }, ...trimmed],
+        max_tokens: 512,
       });
       setMessages([...next, { role: 'assistant', content: reply }]);
-    } catch (e) { setError(e.message || String(e)); }
+    } catch (e) { setError(humaniseError(e.message || String(e))); }
     finally { setBusy(false); }
   };
 
@@ -285,11 +297,11 @@ function extractContextFrom(el) {
   return null;
 }
 
-async function callChat({ url, model, messages }) {
+async function callChat({ url, model, messages, max_tokens }) {
   const isOllama = /\/api\/chat\b/.test(url);
   const body = isOllama
     ? { model, messages, stream: false, options: { temperature: 0.4 } }
-    : { model, messages, temperature: 0.4 };
+    : { model, messages, temperature: 0.4, max_tokens: max_tokens || 512 };
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -297,7 +309,7 @@ async function callChat({ url, model, messages }) {
   });
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} — ${txt.slice(0, 250)}`);
+    throw new Error(`HTTP ${res.status} — ${txt.slice(0, 350)}`);
   }
   const data = await res.json();
   if (isOllama) return (data && data.message && data.message.content) || '(empty response)';
@@ -307,40 +319,61 @@ async function callChat({ url, model, messages }) {
   return '(empty response)';
 }
 
-function buildSystemPrompt(ctx) {
-  const parts = [
-    'You are a research-methods assistant for the Method Atlas Entrepreneur, a guided web tool that helps researchers select predictive analytic techniques in entrepreneurship research.',
-    'Reply concisely and pedagogically. When relevant, cite the authors listed in the ATLAS KNOWLEDGE BASE below. Mention assumptions, sample-size rules of thumb and reporting standards. Do not invent references; rely on the digest provided.',
-    'If the user asks something outside the atlas, answer briefly and steer them back to the closest atlas sector.',
-    '',
-    '=== ATLAS KNOWLEDGE BASE ===',
-    (window.ATLAS_KNOWLEDGE || '').trim(),
-    '=== END KNOWLEDGE BASE ===',
-    '',
-  ];
-  if (ctx && ctx.kind === 'question' && ctx.question) {
-    parts.push(
-      `LIVE CONTEXT — the researcher is currently on question ${ctx.question.id}: "${ctx.question.text}".`,
-      `Available options: ${ctx.question.options.map(o => `[${o.label}]`).join(' | ')}.`,
-      'Help them think through the choice. Do not pick one for them unless they ask explicitly.'
-    );
-    if (ctx.history && ctx.history.length) {
-      parts.push('Prior answers in this session:');
-      ctx.history.forEach(h => parts.push(`  - ${h.questionText} → ${h.answerLabel}`));
-    }
-  } else if (ctx && ctx.kind === 'result' && ctx.winner) {
-    parts.push(
-      `LIVE CONTEXT — the atlas has just recommended: ${ctx.winner.label} (${ctx.winner.sub}).`,
-      `Goal: ${ctx.winner.goal}.`,
-      `Hypothesis templates: ${(ctx.winner.hypotheses || []).join(' | ')}.`,
-      `Conditions: ${(ctx.winner.conditions || []).join(' | ')}.`,
-      `Assumptions to defend: ${(ctx.winner.assumes || []).join(' | ')}.`,
-      `Recommended authors: ${(ctx.winner.authors || []).map(a => `${a.name} (${a.work})`).join('; ')}.`,
-      'Help the researcher operationalise this technique.'
-    );
-  } else {
-    parts.push('LIVE CONTEXT — the researcher has not started yet.');
+function humaniseError(raw) {
+  if (/429/.test(raw)) {
+    const m = raw.match(/try again in ([\d.]+)s/i);
+    if (m) return `The free Groq tier briefly throttled you — please wait about ${Math.ceil(parseFloat(m[1]))} seconds and resend.`;
+    return 'The free Groq tier rate-limited this request (6,000 tokens/min). Please retry in a few seconds.';
   }
+  if (/HTTP 5\d\d/.test(raw)) return 'The server is temporarily unavailable. Please retry in a moment.';
+  return raw;
+}
+
+// Build a TIGHT system prompt. We include only the sector(s) that are
+// relevant to the current state — the full atlas knowledge would blow
+// past Groq's 6,000 TPM free-tier limit on the second turn.
+function buildSystemPrompt(ctx) {
+  const sectors = (window.TAXONOMY && window.TAXONOMY.sectors) || [];
+  const taxIndex = sectors
+    .map(s => `${s.id}:${s.label}`)
+    .join(', ');
+
+  const parts = [
+    'You are a research-methods assistant for the Method Atlas Entrepreneur — a guided tool that helps researchers pick predictive analytic techniques in entrepreneurship research.',
+    'Reply concisely (≤180 words unless the user asks for depth). Cite authors when relevant from the SECTOR digest below. Do not invent references.',
+    `Atlas sectors available (id:label): ${taxIndex}.`,
+  ];
+
+  let relevantSector = null;
+  if (ctx && ctx.kind === 'result' && ctx.winner) {
+    relevantSector = ctx.winner;
+    parts.push(`Current recommendation: ${ctx.winner.label} (${ctx.winner.sub}).`);
+  } else if (ctx && ctx.kind === 'question' && ctx.question) {
+    // Pick the leading sector based on the option weights of this question
+    // plus a quick scan of history.
+    const acc = {};
+    (ctx.history || []).forEach(h => {
+      Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
+    });
+    const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
+    if (ranked.length) relevantSector = sectors.find(s => s.id === ranked[0][0]);
+    parts.push(`Question on screen: ${ctx.question.id} — "${ctx.question.text}". Options: ${ctx.question.options.map(o => o.label).join(' | ')}.`);
+  }
+
+  if (relevantSector) {
+    parts.push('--- RELEVANT SECTOR DIGEST ---');
+    parts.push(`Technique: ${relevantSector.label} — ${relevantSector.sub}.`);
+    if (relevantSector.goal) parts.push(`Goal: ${relevantSector.goal}`);
+    const techs = (relevantSector.techniques || []).slice(0, 6).join(', ');
+    if (techs) parts.push(`Techniques: ${techs}.`);
+    const assumes = (relevantSector.assumes || []).slice(0, 4).join('; ');
+    if (assumes) parts.push(`Assumptions: ${assumes}.`);
+    const authors = (relevantSector.authors || []).slice(0, 4)
+      .map(a => `${a.name} — ${a.work}`).join('; ');
+    if (authors) parts.push(`Key authors: ${authors}.`);
+  }
+
+  parts.push('If the user asks about a technique outside the current sector, answer briefly using common knowledge and point them to the closest atlas sector by name.');
   return parts.join('\n');
 }
 
