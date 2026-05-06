@@ -38,10 +38,11 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   const { path, leaderInfo } = useMemo(() => {
     if (!history || history.length === 0) return { path: [], leaderInfo: null };
     const acc = {};
-    const rMax = rOuter * 0.92;
-    const rMin = rOuter * 0.08;
-    // Estimated total for the spiral. If the caller hasn't told us, use the
-    // number of questions in the bank; either way the path keeps tightening.
+    // The spiral spans almost the full radius — first vertex on the outer
+    // rim, last vertex very close to the centre — so the rim→centre
+    // direction is unmistakable.
+    const rMax = rOuter * 0.96;
+    const rMin = rOuter * 0.04;
     const expected = Math.max(history.length, totalQuestions || history.length);
     const built = history.map((h, idx) => {
       Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
@@ -56,20 +57,20 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
         totalScore += score;
       }
       const angleRad = totalScore > 0 ? Math.atan2(sumY, sumX) : -Math.PI / 2;
-      // Radius: each answer pulls us one notch closer to the centre.
-      const t = (idx + 1) / (expected + 0.6);  // never quite hits 1 mid-flow
+      // Radius: linear shrink from rMax to rMin across the expected total.
+      // Each answer moves the trail one full step inward — rim → centre.
+      const denom = Math.max(1, expected - 1);
+      const t = idx / denom;     // 0 for first answer, 1 for last
       const radius = rMax - (rMax - rMin) * t;
       const x = cx + radius * Math.cos(angleRad);
       const y = cy + radius * Math.sin(angleRad);
-      // Outward label position so multiple labels never stack on the same spot
-      const labelDist = size * 0.034;
+      // Outward label position so labels never stack on the same spot
+      const labelDist = size * 0.045;
       const lx = cx + (radius + labelDist) * Math.cos(angleRad);
       const ly = cy + (radius + labelDist) * Math.sin(angleRad);
-      // Anchor based on quadrant for clean readability
       const cosA = Math.cos(angleRad), sinA = Math.sin(angleRad);
       const anchor = cosA >  0.4 ? 'start' : cosA < -0.4 ? 'end' : 'middle';
       const baseline = sinA >  0.5 ? 'hanging' : sinA < -0.5 ? 'auto' : 'middle';
-      // Dominant sector at this step (for colour cues)
       const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
       const leaderId = ranked.length ? ranked[0][0] : null;
       const sector = sectors.find(s => s.id === leaderId) || sectors[0];
@@ -81,7 +82,6 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
         isLast: idx === history.length - 1,
       };
     });
-    // Compute the destination badge (centre): current leading sector overall.
     const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
     const leaderId = ranked.length ? ranked[0][0] : null;
     const leader = sectors.find(s => s.id === leaderId);
@@ -264,33 +264,35 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
               fill="none"
               stroke="#000"
               strokeOpacity="0.9"
-              strokeWidth={size * 0.0036}
+              strokeWidth={size * 0.004}
               strokeLinecap="round"
               strokeLinejoin="round" />
           )}
           {path.map((p, i) => (
             <g key={`pp-${i}`}>
-              <circle cx={p.x} cy={p.y} r={size * 0.014}
-                fill="#000" stroke="#fff" strokeWidth={size * 0.002} />
+              <circle cx={p.x} cy={p.y} r={size * 0.018}
+                fill="#000" stroke="#fff" strokeWidth={size * 0.0028} />
               <text
-                x={p.x} y={p.y + size * 0.004}
+                x={p.x} y={p.y + size * 0.006}
                 fill="#fff"
-                fontSize={size * 0.011}
+                fontSize={size * 0.015}
                 fontFamily={theme.serif}
                 textAnchor="middle"
-                fontWeight={600}>{p.idx}</text>
-              {/* Counter-rotate the label so reading direction stays upright
-                  even though the layer itself is rotated with the disc. */}
+                fontWeight={700}
+                transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>{p.idx}</text>
+              {/* Counter-rotate so reading direction stays upright even
+                  though the layer rotates with the disc. */}
               <text
                 x={p.lx} y={p.ly}
                 fill="#fff"
-                fontSize={size * 0.013}
+                fontSize={size * 0.022}
                 fontFamily={theme.serif}
+                fontWeight={600}
                 textAnchor={p.anchor}
                 dominantBaseline={p.baseline}
                 paintOrder="stroke"
                 stroke="#000"
-                strokeWidth={size * 0.0035}
+                strokeWidth={size * 0.005}
                 strokeLinejoin="round"
                 transform={`rotate(${-rotZ}, ${p.lx}, ${p.ly})`}>
                 {p.label}
