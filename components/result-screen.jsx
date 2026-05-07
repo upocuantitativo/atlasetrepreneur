@@ -10,6 +10,41 @@
 //   9. Comparison to alternatives
 //  10. Reasoning trail
 
+// Build the list of "transformation conditions". For the recommended sector,
+// we walk every answered question and flag those whose chosen option
+// contributes a NON-POSITIVE weight (0, absent or negative) to that sector,
+// while OTHER options of the same question contribute positively. Those are
+// the design choices the researcher would have to revisit to actually be able
+// to apply the recommended technique.
+function buildTransformationConditions(history, winner) {
+  if (!winner || !history || history.length === 0) return [];
+  const bank = window.QUESTIONS || [];
+  const conditions = [];
+  for (const h of history) {
+    const q = bank.find(x => x.id === h.questionId);
+    if (!q || !Array.isArray(q.options)) continue;
+    const chosenWeight = (h.weights && h.weights[winner.id]) || 0;
+    if (chosenWeight > 0) continue;     // chosen answer already supports the winner
+    const better = q.options
+      .map((o, i) => ({
+        idx: i,
+        label: o.label,
+        weight: (o.weights && o.weights[winner.id]) || 0,
+      }))
+      .filter(o => o.weight > 0 && o.idx !== h.optionIdx)
+      .sort((a, b) => b.weight - a.weight);
+    if (better.length === 0) continue;  // no alternative would help
+    conditions.push({
+      questionId: h.questionId,
+      questionText: h.questionText,
+      chosen: h.answerLabel,
+      chosenWeight,
+      better: better.slice(0, 3),       // up to three alternatives
+    });
+  }
+  return conditions;
+}
+
 window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone = 'serif-dark' }) {
   const sectors = window.TAXONOMY.sectors;
   const ranked = [...sectors]
@@ -19,6 +54,7 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
   const winner = ranked[0];
   const top3 = ranked.slice(0, 3);
   const total = top3.reduce((a, b) => a + b.score, 0) || 1;
+  const transformations = buildTransformationConditions(history, winner);
 
   return (
     <div className={`result-screen tone-${tone}`}>
@@ -108,6 +144,54 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
             <div className="result-section-eyebrow">Foundational references</div>
             <ul className="refs-list">
               {winner.keyRefs.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* === Transformation conditions: design changes the researcher
+              would need to make in order to actually apply the recommended
+              technique. Only shown when at least one of the user's answers
+              has weight 0 (or negative) for the winner while a different
+              answer to the same question would have supported it. === */}
+        {transformations.length > 0 && (
+          <div className="result-section">
+            <div className="result-section-eyebrow">
+              Conditions for switching to {winner.label}
+            </div>
+            <p className="result-section-hint">
+              The recommendation above reflects the design choices you made.
+              Some of those choices carry a <strong>0 weight</strong> for{' '}
+              {winner.label} — meaning, in their current form, they are not
+              compatible with this technique. To actually apply it you would
+              need to <em>transform your design</em> on the points listed below.
+            </p>
+            <ul className="trans-list">
+              {transformations.map((t, i) => (
+                <li key={i} className="trans-item">
+                  <div className="trans-q">
+                    <span className="trans-qid">{t.questionId}</span>
+                    {' · '}
+                    {t.questionText}
+                  </div>
+                  <div className="trans-from">
+                    <span className="trans-label">You chose:</span>{' '}
+                    <em>"{t.chosen}"</em>
+                    {' '}
+                    <span className="trans-weight">(weight: {t.chosenWeight})</span>
+                  </div>
+                  <div className="trans-to">
+                    <span className="trans-label">Switch to:</span>{' '}
+                    {t.better.map((b, j) => (
+                      <span key={j} className="trans-alt">
+                        {j > 0 && <span className="trans-or"> or </span>}
+                        <em>"{b.label}"</em>
+                        {' '}
+                        <span className="trans-weight">(weight: {b.weight})</span>
+                      </span>
+                    ))}
+                  </div>
+                </li>
+              ))}
             </ul>
           </div>
         )}
