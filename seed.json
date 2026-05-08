@@ -746,20 +746,31 @@
           "weights": {
             "regression": 2,
             "plssem": 1,
-            "anova": 1
+            "anova": 1,
+            "trees": -1,
+            "deep": -1,
+            "xai": -1,
+            "cluster": -1,
+            "fsqca": -1
           }
         },
         {
           "label": "Estimate paths between latent constructs (e.g. entrepreneurial orientation, self-efficacy)",
           "weights": {
             "plssem": 2,
-            "regression": 1
+            "regression": 1,
+            "cluster": -1,
+            "deep": -1,
+            "fsqca": -1
           }
         },
         {
           "label": "Identify equifinal configurations / sufficient conditions (\"recipes for success\")",
           "weights": {
-            "fsqca": 2
+            "fsqca": 2,
+            "regression": -2,
+            "plssem": -1,
+            "anova": -2
           }
         },
         {
@@ -767,7 +778,10 @@
           "weights": {
             "trees": 2,
             "deep": 1,
-            "xai": 1
+            "xai": 1,
+            "anova": -1,
+            "fsqca": -1,
+            "plssem": -1
           }
         },
         {
@@ -775,19 +789,31 @@
           "weights": {
             "xai": 2,
             "trees": 1,
-            "deep": 1
+            "deep": 1,
+            "regression": -1,
+            "anova": -1,
+            "plssem": -1
           }
         },
         {
           "label": "Build typologies / discover latent groups (no labelled outcome)",
           "weights": {
-            "cluster": 2
+            "cluster": 2,
+            "regression": -2,
+            "plssem": -2,
+            "anova": -2,
+            "trees": -2,
+            "deep": -2,
+            "xai": -2,
+            "fsqca": -1
           }
         },
         {
           "label": "Compare means across experimental or treatment groups",
           "weights": {
-            "anova": 2
+            "anova": 2,
+            "cluster": -1,
+            "fsqca": -1
           }
         }
       ]
@@ -806,7 +832,10 @@
           "weights": {
             "regression": 2,
             "trees": 1,
-            "deep": 1
+            "deep": 1,
+            "anova": -2,
+            "plssem": -1,
+            "cluster": -1
           }
         },
         {
@@ -816,14 +845,18 @@
             "anova": 1,
             "plssem": 1,
             "trees": 1,
-            "deep": 1
+            "deep": 1,
+            "cluster": -1
           }
         },
         {
           "label": "Count (number of opportunities, patents, fundraising rounds)",
           "weights": {
             "regression": 2,
-            "trees": 1
+            "trees": 1,
+            "anova": -2,
+            "plssem": -1,
+            "cluster": -1
           }
         },
         {
@@ -831,25 +864,47 @@
           "weights": {
             "regression": 2,
             "trees": 1,
-            "deep": 1
+            "deep": 1,
+            "anova": -2,
+            "fsqca": -1,
+            "plssem": -1,
+            "cluster": -1
           }
         },
         {
           "label": "Multiple endogenous latent constructs (path model)",
           "weights": {
-            "plssem": 2
+            "plssem": 2,
+            "anova": -2,
+            "fsqca": -1,
+            "cluster": -1,
+            "deep": -1,
+            "trees": -1
           }
         },
         {
           "label": "Set membership — degree of belonging to a fuzzy outcome",
           "weights": {
-            "fsqca": 2
+            "fsqca": 2,
+            "regression": -2,
+            "anova": -2,
+            "plssem": -1,
+            "trees": -1,
+            "deep": -1,
+            "cluster": -1
           }
         },
         {
           "label": "No outcome variable — exploratory / unsupervised",
           "weights": {
-            "cluster": 2
+            "cluster": 2,
+            "regression": -3,
+            "plssem": -3,
+            "anova": -3,
+            "trees": -3,
+            "deep": -3,
+            "xai": -3,
+            "fsqca": -2
           }
         }
       ]
@@ -866,7 +921,11 @@
         {
           "label": "Multiple latent constructs with reflective multi-item scales",
           "weights": {
-            "plssem": 2
+            "plssem": 2,
+            "regression": -1,
+            "anova": -1,
+            "trees": -1,
+            "deep": -1
           }
         },
         {
@@ -874,7 +933,8 @@
           "weights": {
             "regression": 1,
             "anova": 1,
-            "plssem": 1
+            "plssem": 1,
+            "trees": 1
           }
         },
         {
@@ -883,14 +943,19 @@
             "regression": 1,
             "trees": 1,
             "deep": 1,
-            "fsqca": 1
+            "fsqca": 1,
+            "plssem": -2
           }
         },
         {
           "label": "Mix of observed variables and unstructured data (text, image)",
           "weights": {
             "deep": 2,
-            "xai": 1
+            "xai": 1,
+            "anova": -2,
+            "plssem": -2,
+            "fsqca": -1,
+            "regression": -1
           }
         }
       ]
@@ -909,19 +974,28 @@
           "weights": {
             "regression": 2,
             "plssem": 1,
-            "anova": 1
+            "anova": 1,
+            "fsqca": -2
           }
         },
         {
           "label": "Configurational — outcomes arise from bundles of conditions",
           "weights": {
-            "fsqca": 2
+            "fsqca": 2,
+            "regression": -1,
+            "anova": -1,
+            "plssem": -1
           }
         },
         {
           "label": "Asymmetric — the recipe for success differs from that for failure",
           "weights": {
-            "fsqca": 2
+            "fsqca": 2,
+            "regression": -2,
+            "anova": -2,
+            "plssem": -2,
+            "trees": -1,
+            "deep": -1
           }
         },
         {
@@ -929,7 +1003,10 @@
           "weights": {
             "trees": 2,
             "deep": 1,
-            "xai": 1
+            "xai": 1,
+            "plssem": -1,
+            "anova": -1,
+            "regression": -1
           }
         }
       ]
@@ -946,7 +1023,13 @@
         {
           "label": "Very small N (< 50) — case-oriented research",
           "weights": {
-            "fsqca": 2
+            "fsqca": 2,
+            "deep": -3,
+            "trees": -2,
+            "xai": -2,
+            "plssem": -2,
+            "regression": -2,
+            "cluster": -1
           }
         },
         {
@@ -955,7 +1038,9 @@
             "regression": 1,
             "anova": 1,
             "plssem": 1,
-            "fsqca": 1
+            "fsqca": 1,
+            "deep": -2,
+            "trees": -1
           }
         },
         {
@@ -964,7 +1049,9 @@
             "trees": 2,
             "regression": 1,
             "plssem": 1,
-            "xai": 1
+            "xai": 1,
+            "deep": -1,
+            "fsqca": -1
           }
         },
         {
@@ -972,14 +1059,19 @@
           "weights": {
             "trees": 2,
             "deep": 1,
-            "xai": 1
+            "xai": 1,
+            "fsqca": -2,
+            "anova": -1
           }
         },
         {
           "label": "Very large N (> 50,000) or rich item-level data",
           "weights": {
             "deep": 2,
-            "trees": 1
+            "trees": 1,
+            "fsqca": -3,
+            "anova": -1,
+            "plssem": -1
           }
         }
       ]
@@ -997,7 +1089,10 @@
           "label": "All categorical — factorial / experimental design",
           "weights": {
             "anova": 2,
-            "fsqca": 1
+            "fsqca": 1,
+            "plssem": -1,
+            "deep": -1,
+            "regression": 1
           }
         },
         {
@@ -1005,7 +1100,8 @@
           "weights": {
             "regression": 1,
             "plssem": 1,
-            "cluster": 1
+            "cluster": 1,
+            "anova": -1
           }
         },
         {
@@ -1013,20 +1109,30 @@
           "weights": {
             "trees": 2,
             "regression": 1,
-            "xai": 1
+            "xai": 1,
+            "anova": -1
           }
         },
         {
           "label": "Multi-item Likert scales tapping latent constructs",
           "weights": {
             "plssem": 2,
-            "regression": 1
+            "regression": 1,
+            "trees": -1,
+            "deep": -1,
+            "fsqca": -1
           }
         },
         {
           "label": "Unstructured (text, images, sequences, social-media)",
           "weights": {
-            "deep": 2
+            "deep": 2,
+            "xai": -1,
+            "anova": -2,
+            "plssem": -2,
+            "regression": -2,
+            "fsqca": -2,
+            "cluster": -1
           }
         }
       ]
@@ -1045,7 +1151,9 @@
           "weights": {
             "regression": 2,
             "plssem": 1,
-            "anova": 1
+            "anova": 1,
+            "deep": -1,
+            "fsqca": -1
           }
         },
         {
@@ -1053,7 +1161,8 @@
           "weights": {
             "trees": 2,
             "xai": 1,
-            "regression": 1
+            "regression": 1,
+            "plssem": -1
           }
         },
         {
@@ -1061,19 +1170,34 @@
           "weights": {
             "deep": 2,
             "xai": 2,
-            "trees": 1
+            "trees": 1,
+            "regression": -2,
+            "plssem": -2,
+            "anova": -1
           }
         },
         {
           "label": "Configurational, not functional — bundles matter",
           "weights": {
-            "fsqca": 2
+            "fsqca": 2,
+            "regression": -1,
+            "anova": -1,
+            "plssem": -1,
+            "trees": -1,
+            "deep": -1
           }
         },
         {
           "label": "Not applicable — exploratory / unsupervised",
           "weights": {
-            "cluster": 2
+            "cluster": 2,
+            "regression": -1,
+            "anova": -1,
+            "plssem": -1,
+            "trees": -1,
+            "deep": -1,
+            "xai": -1,
+            "fsqca": -1
           }
         }
       ]
@@ -1096,7 +1220,8 @@
         {
           "label": "Yes — multiple multi-item constructs need measurement validation (loadings, AVE, HTMT)",
           "weights": {
-            "plssem": 4
+            "plssem": 4,
+            "regression": -1
           }
         },
         {
@@ -1110,7 +1235,7 @@
           "label": "No latent constructs at all — only observed variables",
           "weights": {
             "regression": 4,
-            "plssem": -2
+            "plssem": -3
           }
         }
       ]
@@ -1134,28 +1259,30 @@
           "label": "Strictly tabular — rows and columns of mixed types",
           "weights": {
             "trees": 4,
-            "deep": -1
+            "deep": -2
           }
         },
         {
           "label": "Tabular with embeddings or engineered features from text",
           "weights": {
             "trees": 3,
-            "xai": 1
+            "xai": 1,
+            "deep": -1
           }
         },
         {
           "label": "Mostly unstructured (pitch text, founder voice, images)",
           "weights": {
             "deep": 4,
-            "trees": -1
+            "trees": -2
           }
         },
         {
           "label": "A mix — multimodal model would add value",
           "weights": {
             "deep": 3,
-            "xai": 1
+            "xai": 1,
+            "trees": -1
           }
         }
       ]
@@ -1193,7 +1320,8 @@
           "label": "Mostly explanation — I want to surface a non-linear effect for theory",
           "weights": {
             "xai": 4,
-            "trees": -1
+            "trees": -1,
+            "deep": -1
           }
         }
       ]
@@ -1229,7 +1357,7 @@
           "weights": {
             "regression": 2,
             "trees": 1,
-            "fsqca": -2
+            "fsqca": -3
           }
         }
       ]
@@ -1317,6 +1445,12 @@
           "weights": {
             "anova": 4
           }
+        },
+        {
+          "label": "Non-parametric: ranks (Mann–Whitney / Kruskal–Wallis / Wilcoxon)",
+          "weights": {
+            "anova": 3
+          }
         }
       ]
     },
@@ -1349,7 +1483,7 @@
           "label": "Limited labels — I should fall back to a strong tabular baseline",
           "weights": {
             "trees": 3,
-            "deep": -2
+            "deep": -3
           }
         }
       ]
@@ -1415,13 +1549,16 @@
             "regression": 3,
             "plssem": 2,
             "anova": 2,
-            "fsqca": 1
+            "fsqca": 1,
+            "deep": -1
           }
         },
         {
           "label": "Configurational logic — multiple paths to the outcome",
           "weights": {
-            "fsqca": 4
+            "fsqca": 4,
+            "regression": -1,
+            "anova": -1
           }
         },
         {
@@ -1429,26 +1566,33 @@
           "weights": {
             "trees": 3,
             "deep": 2,
-            "xai": 1
+            "xai": 1,
+            "anova": -1,
+            "fsqca": -1
           }
         },
         {
           "label": "Theoretical novelty surfaced by a strong predictive model",
           "weights": {
             "xai": 4,
-            "trees": 1
+            "trees": 1,
+            "anova": -1
           }
         },
         {
           "label": "Ability to estimate latent constructs jointly",
           "weights": {
-            "plssem": 3
+            "plssem": 3,
+            "trees": -1,
+            "deep": -1
           }
         },
         {
           "label": "Discovery of types or trajectories in the data",
           "weights": {
-            "cluster": 3
+            "cluster": 3,
+            "regression": -1,
+            "plssem": -1
           }
         }
       ]
@@ -1468,28 +1612,35 @@
             "regression": 2,
             "anova": 1,
             "plssem": 1,
-            "fsqca": 1
+            "fsqca": 1,
+            "deep": -2,
+            "trees": -1
           }
         },
         {
           "label": "Need feature importance + interaction shape",
           "weights": {
             "xai": 3,
-            "trees": 1
+            "trees": 1,
+            "plssem": -1
           }
         },
         {
           "label": "Useful — global feature importance is enough",
           "weights": {
             "trees": 2,
-            "xai": 1
+            "xai": 1,
+            "plssem": -1
           }
         },
         {
           "label": "Secondary — accuracy first",
           "weights": {
             "deep": 2,
-            "trees": 1
+            "trees": 1,
+            "regression": -1,
+            "plssem": -1,
+            "fsqca": -1
           }
         },
         {
@@ -1514,13 +1665,16 @@
           "weights": {
             "regression": 2,
             "anova": 2,
-            "plssem": 1
+            "plssem": 1,
+            "cluster": -1
           }
         },
         {
           "label": "Bootstrap path significance + PLSpredict",
           "weights": {
-            "plssem": 3
+            "plssem": 3,
+            "anova": -1,
+            "fsqca": -1
           }
         },
         {
@@ -1528,19 +1682,25 @@
           "weights": {
             "trees": 2,
             "deep": 2,
-            "xai": 1
+            "xai": 1,
+            "anova": -1,
+            "fsqca": -1
           }
         },
         {
           "label": "Truth-table consistency, coverage and robustness checks",
           "weights": {
-            "fsqca": 3
+            "fsqca": 3,
+            "regression": -1,
+            "anova": -1
           }
         },
         {
           "label": "Cluster stability — split-half / bootstrap / silhouette",
           "weights": {
-            "cluster": 3
+            "cluster": 3,
+            "regression": -1,
+            "anova": -1
           }
         }
       ]
