@@ -702,27 +702,34 @@ body { background: #f5f4ef; color: #1a1a1a; }
   margin-right: 6px;
   font-style: normal;
 }
-.trans-from { color: #ffb4b4; margin-bottom: 4px; }
+.trans-from { color: #ffb4b4; margin-bottom: 6px; }
 .trans-to   { color: #b4ffb4; }
 .trans-label {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-right: 4px;
+  margin-right: 6px;
   opacity: 0.85;
 }
-.trans-weight {
-  font-family: var(--mono);
-  font-size: 11px;
+.trans-alt-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0 0;
+  display: grid;
+  gap: 4px;
+}
+.trans-alt-list li {
+  padding-left: 18px;
+  position: relative;
+}
+.trans-alt-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: inherit;
   opacity: 0.7;
 }
-.trans-or {
-  color: #cfe1ff;
-  font-style: italic;
-  margin: 0 4px;
-}
-.trans-alt em { color: inherit; }
 .tone-serif-paper .trans-item { background: rgba(192, 57, 43, 0.08); color: #1a1208; }
 .tone-serif-paper .trans-q { color: #1a1208; }
 .tone-serif-paper .trans-from { color: #7a1f1f; }

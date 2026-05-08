@@ -25,21 +25,30 @@ function buildTransformationConditions(history, winner) {
     if (!q || !Array.isArray(q.options)) continue;
     const chosenWeight = (h.weights && h.weights[winner.id]) || 0;
     if (chosenWeight > 0) continue;     // chosen answer already supports the winner
-    const better = q.options
+    // Any option of the same question that is STRICTLY MORE COMPATIBLE
+    // with the winner than the chosen one. This guarantees we usually
+    // surface at least two alternatives even when only one option carries
+    // a positive weight (the neighbouring 0-weight option is still
+    // "less incompatible" than a -2 chosen option).
+    const allBetter = q.options
       .map((o, i) => ({
         idx: i,
         label: o.label,
         weight: (o.weights && o.weights[winner.id]) || 0,
       }))
-      .filter(o => o.weight > 0 && o.idx !== h.optionIdx)
+      .filter(o => o.idx !== h.optionIdx && o.weight > chosenWeight)
       .sort((a, b) => b.weight - a.weight);
-    if (better.length === 0) continue;  // no alternative would help
+    if (allBetter.length === 0) continue;
+    // Keep up to three alternatives. If positive-weight options exist,
+    // prefer those; otherwise fall back to the best non-positive ones so
+    // the section always offers at least two alternatives when possible.
+    const positives = allBetter.filter(o => o.weight > 0);
+    const better = (positives.length >= 2 ? positives : allBetter).slice(0, 3);
     conditions.push({
       questionId: h.questionId,
       questionText: h.questionText,
       chosen: h.answerLabel,
-      chosenWeight,
-      better: better.slice(0, 3),       // up to three alternatives
+      better,
     });
   }
   return conditions;
@@ -176,19 +185,14 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
                   <div className="trans-from">
                     <span className="trans-label">You chose:</span>{' '}
                     <em>"{t.chosen}"</em>
-                    {' '}
-                    <span className="trans-weight">(weight: {t.chosenWeight})</span>
                   </div>
                   <div className="trans-to">
-                    <span className="trans-label">Switch to:</span>{' '}
-                    {t.better.map((b, j) => (
-                      <span key={j} className="trans-alt">
-                        {j > 0 && <span className="trans-or"> or </span>}
-                        <em>"{b.label}"</em>
-                        {' '}
-                        <span className="trans-weight">(weight: {b.weight})</span>
-                      </span>
-                    ))}
+                    <span className="trans-label">Switch to:</span>
+                    <ul className="trans-alt-list">
+                      {t.better.map((b, j) => (
+                        <li key={j}><em>"{b.label}"</em></li>
+                      ))}
+                    </ul>
                   </div>
                 </li>
               ))}
