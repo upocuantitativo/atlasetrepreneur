@@ -84,6 +84,11 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
   // dynamically.
   const [history, setHistory] = useState([]);
   const [done, setDone] = useState(false);
+  // Stack of past recommendations the user has navigated away from by
+  // clicking a "the recommendation would be …" alternative. Each entry
+  // is a snapshot of the history that produced that previous winner, so
+  // the user can return to any earlier recommendation.
+  const [recHistory, setRecHistory] = useState([]);
   // Chat is CLOSED by default. The user opens it explicitly via the "Ask"
   // pill (or the floating button on phones). Their choice is remembered.
   const [chatOpen, setChatOpen] = useState(() => {
@@ -207,25 +212,29 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
     const popped = history[history.length - 1];
     trackEvent('back', { fromQuestionId: popped && popped.questionId, stepIndex: history.length - 1 });
     setHistory(h => h.slice(0, -1));
+    setRecHistory([]);            // navigating away invalidates the recommendation stack
     setDone(false);
   };
 
   const handleJump = (i) => {
     trackEvent('jump', { toIndex: i, fromIndex: history.length });
     setHistory(h => h.slice(0, i));
+    setRecHistory([]);
     setDone(false);
   };
 
   const restart = () => {
     trackEvent('restart', { fromSteps: history.length });
     setHistory([]);
+    setRecHistory([]);
     setDone(false);
   };
 
   // Result-screen feature: clicking a "the recommendation would be …"
   // alternative replays the flow as if the user had picked that option for
   // the matching question. We mutate the matching history entry in place;
-  // scores and the winner recompute downstream.
+  // scores and the winner recompute downstream. The PRIOR state is pushed
+  // onto recHistory so the user can revert to any previous recommendation.
   const handleAlternativeClick = (questionId, newOptionIdx) => {
     const bank = window.QUESTIONS || [];
     const q = bank.find(x => x.id === questionId);
@@ -233,6 +242,20 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
     const newOpt = q.options[newOptionIdx];
     if (!newOpt) return;
     const prevEntry = history.find(h => h.questionId === questionId);
+
+    // Snapshot the recommendation that's about to be replaced. `winner`
+    // here still references the PRIOR state because state hasn't updated
+    // yet within this synchronous handler.
+    setRecHistory(rh => [...rh, {
+      history: history.slice(),
+      winnerId: winner ? winner.id : null,
+      winnerLabel: winner ? winner.label : null,
+      winnerHue: winner ? winner.hue : 0,
+      switchedAt: questionId,
+      switchedFromLabel: prevEntry ? prevEntry.answerLabel : null,
+      at: Date.now(),
+    }]);
+
     setHistory(h => h.map(entry => {
       if (entry.questionId !== questionId) return entry;
       return {
@@ -246,9 +269,26 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
       questionId,
       previousOptionIdx: prevEntry ? prevEntry.optionIdx : null,
       previousAnswerLabel: prevEntry ? prevEntry.answerLabel : null,
+      previousWinnerId: winner ? winner.id : null,
       newOptionIdx,
       newAnswerLabel: newOpt.label,
     });
+  };
+
+  // Restore a previous recommendation snapshot. We jump straight to the
+  // captured history; everything downstream of the chosen snapshot is
+  // discarded (linear undo).
+  const handleRevertToRecommendation = (idx) => {
+    const snap = recHistory[idx];
+    if (!snap) return;
+    trackEvent('recommendation_revert', {
+      toWinnerId: snap.winnerId,
+      toWinnerLabel: snap.winnerLabel,
+      fromWinnerId: winner ? winner.id : null,
+      snapshotIdx: idx,
+    });
+    setHistory(snap.history);
+    setRecHistory(rh => rh.slice(0, idx));
   };
 
   const winner = useMemo(() => {
@@ -286,6 +326,8 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
           history={history}
           onRestart={restart}
           onAlternativeClick={handleAlternativeClick}
+          recHistory={recHistory}
+          onRevertRecommendation={handleRevertToRecommendation}
           onTrack={trackEvent}
           sessionId={sessionId}
           tone={tone}

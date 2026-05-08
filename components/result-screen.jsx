@@ -186,7 +186,7 @@ function buildEmailText({ winner, history, top3, total }) {
   return lines.join('\n');
 }
 
-window.ResultScreen = function ResultScreen({ scores, history, onRestart, onAlternativeClick, onTrack, sessionId, tone = 'serif-dark' }) {
+window.ResultScreen = function ResultScreen({ scores, history, onRestart, onAlternativeClick, recHistory = [], onRevertRecommendation, onTrack, sessionId, tone = 'serif-dark' }) {
   const sectors = window.TAXONOMY.sectors;
   const ranked = [...sectors]
     .map(s => ({ ...s, score: scores[s.id] || 0 }))
@@ -264,6 +264,29 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, onAlte
             </h1>
             <div className="result-sub">{winner.goal}</div>
             {winner.description && <p className="result-description">{winner.description}</p>}
+
+            {recHistory.length > 0 && (
+              <div className="rec-history-bar">
+                <span className="rec-history-label">
+                  Previous recommendation{recHistory.length === 1 ? '' : 's'} —
+                  click to recover or pick another:
+                </span>
+                <div className="rec-history-chips">
+                  {recHistory.map((snap, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="rec-history-chip"
+                      style={{ '--chip-hue': snap.winnerHue || 230 }}
+                      onClick={() => onRevertRecommendation && onRevertRecommendation(i)}
+                      title={`Restore the recommendation: ${snap.winnerLabel}`}>
+                      <span className="rec-history-chip-arrow">↩</span>
+                      <span className="rec-history-chip-label">{snap.winnerLabel}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <aside className="result-header-aside">
             <window.ItineraryMap
