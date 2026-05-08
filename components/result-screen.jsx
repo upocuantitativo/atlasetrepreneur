@@ -253,7 +253,12 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, onAlte
         {/* === Top header: title block on the left, mandala + email on the right === */}
         <div className="result-header">
           <div className="result-header-main">
-            <div className="result-eyebrow">Recommendation</div>
+            <div className="result-eyebrow-row">
+              <div className="result-eyebrow">Recommendation</div>
+              <button className="btn-restart-top" onClick={onRestart} title="Start a new inquiry from scratch">
+                ↻ Begin new inquiry
+              </button>
+            </div>
             <h1 className="result-title">
               <span className="result-title-em" style={{ color: `oklch(0.7 0.22 ${winner.hue})` }}>{winner.label}</span>
             </h1>
@@ -463,10 +468,6 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, onAlte
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="result-actions">
-          <button className="btn-primary" onClick={onRestart}>Begin new inquiry</button>
         </div>
 
         <window.MethodsRecipe winner={winner} history={history} scores={scores} />

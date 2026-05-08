@@ -746,6 +746,37 @@ body { background: #f5f4ef; color: #1a1a1a; }
 .result-header .result-sub   { margin-bottom: 22px; }
 .result-header .result-description { margin-bottom: 0; }
 
+/* "Recommendation" eyebrow row holds the restart button on its right so
+   the user can start over without scrolling to the bottom. */
+.result-eyebrow-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.result-eyebrow-row .result-eyebrow { margin-bottom: 0; }
+.btn-restart-top {
+  background: transparent;
+  border: 1px solid rgba(155, 176, 216, 0.45);
+  color: #cfe1ff;
+  border-radius: 100px;
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn-restart-top:hover {
+  background: rgba(207, 225, 255, 0.12);
+  border-color: rgba(207, 225, 255, 0.85);
+  color: #fff;
+}
+.tone-serif-paper .btn-restart-top { color: #3a2a18; border-color: rgba(58, 42, 24, 0.45); }
+.tone-serif-paper .btn-restart-top:hover { background: rgba(58, 42, 24, 0.08); border-color: #3a2a18; color: #1a1208; }
+.tone-editorial .btn-restart-top { color: #1a2540; border-color: rgba(26, 37, 64, 0.4); }
+.tone-editorial .btn-restart-top:hover { background: rgba(26, 37, 64, 0.06); border-color: #1a2540; color: #0e1530; }
+
 /* ==== Result screen — extended sections ==== */
 .result-description {
   font-family: var(--serif); font-size: 17px; line-height: 1.6;

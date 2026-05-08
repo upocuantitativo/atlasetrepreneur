@@ -335,7 +335,9 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
             </div>
           </div>
           <div className="overlay-top-right">
-            <window.MiniMap focusSector={focusSector} focusRing={focusRing} scores={scores} tone={tone} />
+            {history.length > 0 && (
+              <window.MiniMap focusSector={focusSector} focusRing={focusRing} scores={scores} tone={tone} />
+            )}
           </div>
         </div>
 
