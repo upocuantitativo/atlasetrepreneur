@@ -123,21 +123,32 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
   // focus while pushing the rest of the trail toward the front-bottom
   // of the screen, which is the area closest to the viewer with the
   // X-tilt — i.e. the most visible.
+  //
+  // We also shift the disc DOWN by ~18% of its size: with the centred
+  // 3D layout the disc's projected height (size * cos28° ≈ 0.88·size)
+  // overflows shorter viewports, hiding the north pole — i.e. the
+  // latest vertex. The downward shift keeps the upper half (where the
+  // path always lives, since the latest vertex is rotated to north and
+  // the path runs inward toward the centre) inside the viewport at the
+  // cost of letting the empty bottom half slip below the fold. This
+  // matches the user request: "always half a sphere visible, so the
+  // path is always on screen".
   const { rotZ, zoom, translateY } = useMemo(() => {
+    const shift = depth ? size * 0.06 : 0;
     if (!depth) return { rotZ: 0, zoom: 1, translateY: 0 };
     if (path.length === 0) {
       // No history yet — fall back to focusSector if any
-      if (!focusSector) return { rotZ: 0, zoom: 1, translateY: 0 };
+      if (!focusSector) return { rotZ: 0, zoom: 1, translateY: shift };
       const s = sectors.find(s => s.id === focusSector);
-      if (!s) return { rotZ: 0, zoom: 1, translateY: 0 };
-      return { rotZ: ((-s.angle) + 360) % 360, zoom: 1, translateY: 0 };
+      if (!s) return { rotZ: 0, zoom: 1, translateY: shift };
+      return { rotZ: ((-s.angle) + 360) % 360, zoom: 1, translateY: shift };
     }
     const last = path[path.length - 1];
     const mathAngleDeg = Math.atan2(last.y - cy, last.x - cx) * 180 / Math.PI;
     const sectorAngleDeg = mathAngleDeg + 90; // 0° = top in our convention
     const rotZ = ((-sectorAngleDeg) + 360) % 360;
-    return { rotZ, zoom: 1, translateY: 0 };
-  }, [path, focusSector, depth, sectors, cx, cy]);
+    return { rotZ, zoom: 1, translateY: shift };
+  }, [path, focusSector, depth, sectors, cx, cy, size]);
 
   // Theme palette per tone.
   const theme = TONES[tone] || TONES['serif-dark'];

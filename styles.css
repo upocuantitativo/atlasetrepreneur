@@ -37,8 +37,12 @@ body { background: #f5f4ef; color: #1a1a1a; }
   background: var(--mandala-bg);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
-  padding-top: 60px;
+  /* No padding-top: the brand header is fully transparent and floats on
+     top of the disc, so the disc can use the full viewport height. */
 }
+/* Belt and braces: the overlay header must have no opaque background of
+   its own, so the disc shows through behind the title. */
+.overlay-top, .overlay-mid { background: transparent !important; }
 .mandala-plane {
   /* Scale the disc up so it fills more of the viewport without bleeding past
      the header / dialog. */
@@ -1189,7 +1193,7 @@ body.atlas-help-dragging .chat-help-ghost { pointer-events: none; }
   .breadcrumbs { display: none; }
   .sector-hud { display: none; }
   .overlay-mid { display: none; }
-  .mandala-stage { padding-top: 70px; }
+  /* Mobile: header still transparent, disc may sit slightly under it. */
   /* Smaller, tighter option buttons on phones */
   .dialog-options { gap: 5px; }
   .opt-btn { padding: 7px 9px; font-size: 13px; }

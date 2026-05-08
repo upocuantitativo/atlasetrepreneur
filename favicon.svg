@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Method Atlas favicon: an 8-sector mandala echoing the methodology wheel.
+       Sector hues match data/taxonomy.js (anova 8, regression 28, plssem 60,
+       fsqca 320, cluster 260, trees 168, xai 130, deep 210). -->
+
+  <!-- Background disc (warm paper) -->
+  <circle cx="16" cy="16" r="15.4" fill="#fbf8f3"/>
+
+  <!-- 8 sector wedges, 45° each, CW from north -->
+  <path d="M 16 16 L 16 2.5 A 13.5 13.5 0 0 1 25.55 6.45 Z" fill="hsl(8, 70%, 52%)"/>
+  <path d="M 16 16 L 25.55 6.45 A 13.5 13.5 0 0 1 29.5 16 Z" fill="hsl(28, 78%, 52%)"/>
+  <path d="M 16 16 L 29.5 16 A 13.5 13.5 0 0 1 25.55 25.55 Z" fill="hsl(60, 75%, 45%)"/>
+  <path d="M 16 16 L 25.55 25.55 A 13.5 13.5 0 0 1 16 29.5 Z" fill="hsl(320, 60%, 50%)"/>
+  <path d="M 16 16 L 16 29.5 A 13.5 13.5 0 0 1 6.45 25.55 Z" fill="hsl(260, 55%, 55%)"/>
+  <path d="M 16 16 L 6.45 25.55 A 13.5 13.5 0 0 1 2.5 16 Z" fill="hsl(168, 60%, 40%)"/>
+  <path d="M 16 16 L 2.5 16 A 13.5 13.5 0 0 1 6.45 6.45 Z" fill="hsl(130, 55%, 38%)"/>
+  <path d="M 16 16 L 6.45 6.45 A 13.5 13.5 0 0 1 16 2.5 Z" fill="hsl(210, 60%, 50%)"/>
+
+  <!-- Concentric guide rings (paper-coloured, faint) -->
+  <circle cx="16" cy="16" r="9.5" fill="none" stroke="#fbf8f3" stroke-width="0.6" opacity="0.55"/>
+  <circle cx="16" cy="16" r="5.2" fill="none" stroke="#fbf8f3" stroke-width="0.6" opacity="0.55"/>
+
+  <!-- Outer outline -->
+  <circle cx="16" cy="16" r="13.5" fill="none" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- Centre core -->
+  <circle cx="16" cy="16" r="2.6" fill="#fbf8f3" stroke="#1f1f1f" stroke-width="0.8"/>
+</svg>
