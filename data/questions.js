@@ -313,7 +313,7 @@ window.QUESTIONS = [
     id: 'A-DeepReadiness',
     ring: 2,
     showIf: (sc) => window.QHELPERS.leaderIs(sc, 'deep'),
-    text: 'Do you have the labelled data and compute to support deep learning?',
+    text: 'Do you have the labelled data and compute to support neural networks?',
     hint: 'A few thousand labels and a GPU are usually the minimum; otherwise XGBoost wins.',
     options: [
       { label: 'Yes — thousands of labels + GPU access (or pretrained backbone to fine-tune)',

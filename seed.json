@@ -623,7 +623,7 @@
     },
     {
       "id": "deep",
-      "label": "Deep Learning",
+      "label": "Neural Network",
       "sub": "Neural networks on rich data",
       "angle": 315,
       "hue": 210,
@@ -1457,7 +1457,7 @@
     {
       "id": "A-DeepReadiness",
       "ring": 2,
-      "text": "Do you have the labelled data and compute to support deep learning?",
+      "text": "Do you have the labelled data and compute to support neural networks?",
       "hint": "A few thousand labels and a GPU are usually the minimum; otherwise XGBoost wins.",
       "always": false,
       "multi_select": false,

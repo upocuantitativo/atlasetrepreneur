@@ -343,7 +343,7 @@ window.TAXONOMY = {
     },
     {
       id: 'deep',
-      label: 'Deep Learning',
+      label: 'Neural Network',
       sub: 'Neural networks on rich data',
       angle: 315,
       hue: 210,
