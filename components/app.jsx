@@ -12,9 +12,73 @@
 // can ask the local LLM about whatever question they are currently on, or
 // about the final recommendation.
 
-const { useState, useMemo, useEffect } = React;
+const { useState, useMemo, useEffect, useRef } = React;
+
+// One stable session id per page load. Used to correlate every interaction
+// (answers, back/jump, chat questions, recommendation, email) on the
+// server side. Stored in sessionStorage so a refresh during the same tab
+// keeps the same session, but a new tab starts fresh.
+function getOrCreateSessionId() {
+  try {
+    const k = 'atlas_session_id';
+    let id = sessionStorage.getItem(k);
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID && crypto.randomUUID()) ||
+           ('s_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10));
+      sessionStorage.setItem(k, id);
+    }
+    return id;
+  } catch (e) {
+    return 's_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+  }
+}
+
+// Fire-and-forget tracking. Any failure is silently logged to the console;
+// the UI never blocks on the network. Uses keepalive so events that happen
+// just before a page unload still get delivered.
+function postTrack(sessionId, eventType, payload) {
+  if (!sessionId || !eventType) return;
+  try {
+    fetch('./api.php?action=track', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        session_id: sessionId,
+        event_type: eventType,
+        ts_ms: Date.now(),
+        payload: payload || null,
+      }),
+    }).catch(() => {});
+  } catch (e) { /* swallow */ }
+}
 
 window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
+  // Stable session id for this visit
+  const sessionIdRef = useRef(getOrCreateSessionId());
+  const sessionId = sessionIdRef.current;
+  const trackEvent = useMemo(
+    () => (type, payload) => postTrack(sessionId, type, payload),
+    [sessionId]
+  );
+
+  // Emit session_start exactly once per page load (per session id).
+  useEffect(() => {
+    const k = 'atlas_session_start_emitted';
+    try {
+      if (sessionStorage.getItem(k) !== sessionId) {
+        sessionStorage.setItem(k, sessionId);
+        trackEvent('session_start', {
+          referrer: document.referrer || null,
+          path: window.location.pathname || '/',
+          screen: { w: window.innerWidth, h: window.innerHeight },
+        });
+      }
+    } catch (e) { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
   // history is an *ordered list of answered question entries*. We no longer
   // index the questions array directly because the visible queue changes
   // dynamically.
@@ -89,6 +153,21 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
     }
   }, [currentQ, history.length, done]);
 
+  // Track question_shown when the active question changes (and is not the
+  // very first hit, which is part of session_start). This gives admins a
+  // per-step funnel: question_shown → answer pairs.
+  useEffect(() => {
+    if (!currentQ) return;
+    trackEvent('question_shown', {
+      questionId: currentQ.id,
+      questionText: currentQ.text,
+      ring: currentQ.ring,
+      stepIndex: history.length,
+      optionsCount: (currentQ.options || []).length,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQ && currentQ.id]);
+
   const focusSector = useMemo(() => {
     const entries = Object.entries(scores);
     if (entries.length === 0) return null;
@@ -111,22 +190,65 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
       ring: currentQ.ring,
     };
     setHistory(h => [...h, entry]);
+    trackEvent('answer', {
+      questionId: currentQ.id,
+      questionText: currentQ.text,
+      ring: currentQ.ring,
+      optionIdx,
+      answerLabel: opt.label,
+      note: note || null,
+      weights: opt.weights || {},
+      stepIndex: history.length,
+    });
   };
 
   const handleBack = () => {
     if (history.length === 0) return;
+    const popped = history[history.length - 1];
+    trackEvent('back', { fromQuestionId: popped && popped.questionId, stepIndex: history.length - 1 });
     setHistory(h => h.slice(0, -1));
     setDone(false);
   };
 
   const handleJump = (i) => {
+    trackEvent('jump', { toIndex: i, fromIndex: history.length });
     setHistory(h => h.slice(0, i));
     setDone(false);
   };
 
   const restart = () => {
+    trackEvent('restart', { fromSteps: history.length });
     setHistory([]);
     setDone(false);
+  };
+
+  // Result-screen feature: clicking a "the recommendation would be …"
+  // alternative replays the flow as if the user had picked that option for
+  // the matching question. We mutate the matching history entry in place;
+  // scores and the winner recompute downstream.
+  const handleAlternativeClick = (questionId, newOptionIdx) => {
+    const bank = window.QUESTIONS || [];
+    const q = bank.find(x => x.id === questionId);
+    if (!q || !q.options) return;
+    const newOpt = q.options[newOptionIdx];
+    if (!newOpt) return;
+    const prevEntry = history.find(h => h.questionId === questionId);
+    setHistory(h => h.map(entry => {
+      if (entry.questionId !== questionId) return entry;
+      return {
+        ...entry,
+        optionIdx: newOptionIdx,
+        answerLabel: newOpt.label,
+        weights: newOpt.weights || {},
+      };
+    }));
+    trackEvent('alternative_click', {
+      questionId,
+      previousOptionIdx: prevEntry ? prevEntry.optionIdx : null,
+      previousAnswerLabel: prevEntry ? prevEntry.answerLabel : null,
+      newOptionIdx,
+      newAnswerLabel: newOpt.label,
+    });
   };
 
   const winner = useMemo(() => {
@@ -142,11 +264,40 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
     return { kind: 'idle' };
   }, [done, winner, currentQ, history]);
 
+  // When the user reaches `done`, log the final winner once.
+  const lastWinnerLogged = useRef(null);
+  useEffect(() => {
+    if (done && winner && lastWinnerLogged.current !== winner.id) {
+      lastWinnerLogged.current = winner.id;
+      trackEvent('recommendation_shown', {
+        winner_id: winner.id,
+        winner_label: winner.label,
+        scores,
+        steps: history.length,
+      });
+    }
+  }, [done, winner, scores, history.length, trackEvent]);
+
   if (done) {
     return (
       <div className={`guide-app guide-app-result tone-${tone} ${chatOpen ? 'chat-on' : 'chat-off'}`}>
-        <window.ResultScreen scores={scores} history={history} onRestart={restart} tone={tone} />
-        <window.ChatPanel context={chatContext} tone={tone} open={chatOpen} onToggle={() => setChatOpen(o => !o)} />
+        <window.ResultScreen
+          scores={scores}
+          history={history}
+          onRestart={restart}
+          onAlternativeClick={handleAlternativeClick}
+          onTrack={trackEvent}
+          sessionId={sessionId}
+          tone={tone}
+        />
+        <window.ChatPanel
+          context={chatContext}
+          tone={tone}
+          open={chatOpen}
+          onToggle={() => { setChatOpen(o => !o); trackEvent(chatOpen ? 'chat_close' : 'chat_open', { from: 'result' }); }}
+          onTrack={trackEvent}
+          sessionId={sessionId}
+        />
       </div>
     );
   }
@@ -203,7 +354,14 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
         />
       </div>
 
-      <window.ChatPanel context={chatContext} tone={tone} open={chatOpen} onToggle={() => setChatOpen(o => !o)} />
+      <window.ChatPanel
+        context={chatContext}
+        tone={tone}
+        open={chatOpen}
+        onToggle={() => { setChatOpen(o => !o); trackEvent(chatOpen ? 'chat_close' : 'chat_open', { from: 'question', questionId: currentQ && currentQ.id }); }}
+        onTrack={trackEvent}
+        sessionId={sessionId}
+      />
     </div>
   );
 };

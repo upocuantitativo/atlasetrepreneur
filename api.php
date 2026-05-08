@@ -39,6 +39,8 @@ if ($action === 'get_all')       { ok(getAll($config)); }
 if ($action === 'login')         { doLogin($config); }
 if ($action === 'logout')        { $_SESSION = []; session_destroy(); ok(['logged_out' => true]); }
 if ($action === 'whoami')        { ok(['admin' => isAdmin()]); }
+if ($action === 'track')         { trackEvent($config); }
+if ($action === 'send_email')    { sendRecommendationEmail($config); }
 
 // --- Admin-only actions -----------------------------------------------------
 if (!isAdmin()) fail(401, 'Admin only — log in first');
@@ -48,6 +50,10 @@ if ($action === 'save_question')    { saveQuestion($config); }
 if ($action === 'save_options')     { saveOptions($config); }
 if ($action === 'delete_question')  { deleteQuestion($config); }
 if ($action === 'reseed')           { initSchema($config, true); ok(['reseeded' => true]); }
+if ($action === 'stats_summary')    { ok(statsSummary($config)); }
+if ($action === 'stats_sessions')   { ok(statsSessions($config)); }
+if ($action === 'stats_session')    { ok(statsSession($config)); }
+if ($action === 'stats_emails')     { ok(statsEmails($config)); }
 
 fail(400, 'Unknown action');
 
@@ -229,4 +235,261 @@ function seedFromBundle(PDO $pdo) {
                 ]);
         }
     }
+}
+
+// ===========================================================================
+// Tracking
+// ===========================================================================
+
+function ensureTrackingTables(PDO $pdo) {
+    static $done = false; if ($done) return; $done = true;
+    $stmts = [
+        "CREATE TABLE IF NOT EXISTS tracking_sessions (
+            id            VARCHAR(64)  NOT NULL PRIMARY KEY,
+            started_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_event_at TIMESTAMP    NULL,
+            user_agent    TEXT,
+            ip_hash       VARCHAR(64),
+            events_count  INT          NOT NULL DEFAULT 0,
+            final_winner  VARCHAR(48)  NULL,
+            email         VARCHAR(255) NULL
+        ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS tracking_events (
+            id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            session_id  VARCHAR(64)  NOT NULL,
+            ts          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ts_ms       BIGINT       NULL,
+            event_type  VARCHAR(48)  NOT NULL,
+            payload     JSON,
+            KEY ix_session_ts (session_id, ts),
+            KEY ix_event_type (event_type)
+        ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS email_log (
+            id           BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            session_id   VARCHAR(64)  NULL,
+            email        VARCHAR(255) NOT NULL,
+            winner_id    VARCHAR(48)  NULL,
+            winner_label VARCHAR(255) NULL,
+            subject      VARCHAR(255) NULL,
+            html_body    LONGTEXT     NULL,
+            text_body    LONGTEXT     NULL,
+            payload      JSON         NULL,
+            sent_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            status       VARCHAR(32)  NOT NULL DEFAULT 'sent',
+            error        TEXT         NULL,
+            KEY ix_email (email),
+            KEY ix_session (session_id)
+        ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    ];
+    foreach ($stmts as $s) { try { $pdo->exec($s); } catch (Throwable $e) { /* ignore */ } }
+}
+
+function trackEvent($cfg) {
+    $pdo = db($cfg);
+    ensureTrackingTables($pdo);
+    $body = readJson();
+    $sid  = (string)($body['session_id'] ?? '');
+    $type = (string)($body['event_type'] ?? '');
+    if ($sid === '' || $type === '' || strlen($sid) > 64 || strlen($type) > 48) {
+        fail(400, 'session_id and event_type required');
+    }
+    $payload = $body['payload'] ?? null;
+    $tsMs = isset($body['ts_ms']) ? (int)$body['ts_ms'] : (int)round(microtime(true) * 1000);
+
+    $ipHash = hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . '|atlas');
+    $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if (strlen($ua) > 400) $ua = substr($ua, 0, 400);
+
+    // Upsert session row. user_agent and ip_hash are set on first insert and
+    // not overwritten on subsequent events — we only bump the activity stats.
+    $pdo->prepare('INSERT INTO tracking_sessions (id, user_agent, ip_hash, last_event_at, events_count)
+                   VALUES (?, ?, ?, NOW(), 1)
+                   ON DUPLICATE KEY UPDATE last_event_at = NOW(),
+                                           events_count = events_count + 1')
+        ->execute([$sid, $ua, $ipHash]);
+
+    // Side effects: certain event types update the session row.
+    if ($type === 'recommendation_shown' && is_array($payload) && !empty($payload['winner_id'])) {
+        $pdo->prepare('UPDATE tracking_sessions SET final_winner = ? WHERE id = ?')
+            ->execute([(string)$payload['winner_id'], $sid]);
+    }
+    if ($type === 'email_send' && is_array($payload) && !empty($payload['email'])) {
+        $pdo->prepare('UPDATE tracking_sessions SET email = ? WHERE id = ?')
+            ->execute([(string)$payload['email'], $sid]);
+    }
+
+    $pdo->prepare('INSERT INTO tracking_events (session_id, ts_ms, event_type, payload) VALUES (?, ?, ?, ?)')
+        ->execute([
+            $sid, $tsMs, $type,
+            $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE),
+        ]);
+
+    ok(['tracked' => true]);
+}
+
+// ===========================================================================
+// Email
+// ===========================================================================
+
+function sendRecommendationEmail($cfg) {
+    $pdo = db($cfg);
+    ensureTrackingTables($pdo);
+    $body = readJson();
+
+    $email = trim((string)($body['email'] ?? ''));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(400, 'Invalid email address');
+    if (strlen($email) > 200) fail(400, 'Email too long');
+
+    $sid       = (string)($body['session_id'] ?? '');
+    $winnerId  = (string)($body['winner_id'] ?? '');
+    $winnerLab = (string)($body['winner_label'] ?? '');
+    $subject   = trim((string)($body['subject'] ?? '')) ?: ('Method Atlas — Your recommendation: ' . ($winnerLab ?: 'analytic technique'));
+    $html      = (string)($body['html_body'] ?? '');
+    $text      = (string)($body['text_body'] ?? '');
+    $payload   = $body['payload'] ?? null;
+
+    if ($html === '' && $text === '') fail(400, 'html_body or text_body required');
+
+    // Cap body sizes to avoid runaway storage.
+    if (strlen($html) > 200000) $html = substr($html, 0, 200000);
+    if (strlen($text) > 80000)  $text = substr($text,  0, 80000);
+    if (strlen($subject) > 250) $subject = substr($subject, 0, 250);
+
+    $from = $cfg['MAIL_FROM']      ?? 'info@upo.digital';
+    $fromName = $cfg['MAIL_FROM_NAME'] ?? 'Method Atlas Entrepreneur Research';
+    $replyTo  = $cfg['MAIL_REPLY_TO']   ?? $from;
+
+    // Build a multipart/alternative message so clients with HTML disabled
+    // still get a readable plain-text version.
+    $boundary = 'atlas-' . bin2hex(random_bytes(8));
+    $headers  = [];
+    $headers[] = 'From: ' . sprintf('%s <%s>', mb_encode_mimeheader($fromName, 'UTF-8'), $from);
+    $headers[] = 'Reply-To: ' . $replyTo;
+    $headers[] = 'MIME-Version: 1.0';
+    $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+    $headers[] = 'X-Mailer: MethodAtlas/1.0';
+
+    $textPart = $text !== '' ? $text : strip_tags($html);
+    $htmlPart = $html !== '' ? $html : nl2br(htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+    $msg  = "--$boundary\r\n";
+    $msg .= "Content-Type: text/plain; charset=UTF-8\r\n";
+    $msg .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    $msg .= $textPart . "\r\n\r\n";
+    $msg .= "--$boundary\r\n";
+    $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $msg .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    $msg .= $htmlPart . "\r\n\r\n";
+    $msg .= "--$boundary--\r\n";
+
+    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+
+    $sent = false; $error = null;
+    try {
+        $sent = @mail($email, $encodedSubject, $msg, implode("\r\n", $headers), '-f' . $from);
+        if (!$sent) {
+            $err = error_get_last();
+            $error = $err ? ($err['message'] ?? 'mail() returned false') : 'mail() returned false';
+        }
+    } catch (Throwable $e) { $error = $e->getMessage(); }
+
+    $status = $sent ? 'sent' : 'failed';
+
+    $pdo->prepare('INSERT INTO email_log
+        (session_id, email, winner_id, winner_label, subject, html_body, text_body, payload, status, error)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([
+            $sid !== '' ? $sid : null,
+            $email,
+            $winnerId !== '' ? $winnerId : null,
+            $winnerLab !== '' ? $winnerLab : null,
+            $subject,
+            $htmlPart,
+            $textPart,
+            $payload === null ? null : json_encode($payload, JSON_UNESCAPED_UNICODE),
+            $status,
+            $error,
+        ]);
+
+    if ($sid !== '') {
+        try {
+            $pdo->prepare('UPDATE tracking_sessions SET email = ? WHERE id = ?')
+                ->execute([$email, $sid]);
+            $pdo->prepare('INSERT INTO tracking_events (session_id, ts_ms, event_type, payload) VALUES (?, ?, ?, ?)')
+                ->execute([
+                    $sid, (int)round(microtime(true)*1000), 'email_send',
+                    json_encode(['email' => $email, 'winner_id' => $winnerId, 'status' => $status], JSON_UNESCAPED_UNICODE),
+                ]);
+        } catch (Throwable $e) { /* non-fatal */ }
+    }
+
+    if (!$sent) fail(502, 'mail() failed: ' . ($error ?: 'unknown'));
+    ok(['sent' => true, 'status' => $status]);
+}
+
+// ===========================================================================
+// Stats (admin-only)
+// ===========================================================================
+
+function statsSummary($cfg): array {
+    $pdo = db($cfg); ensureTrackingTables($pdo);
+    $sessions = (int)$pdo->query('SELECT COUNT(*) FROM tracking_sessions')->fetchColumn();
+    $finished = (int)$pdo->query('SELECT COUNT(*) FROM tracking_sessions WHERE final_winner IS NOT NULL')->fetchColumn();
+    $events   = (int)$pdo->query('SELECT COUNT(*) FROM tracking_events')->fetchColumn();
+    $emails   = (int)$pdo->query('SELECT COUNT(*) FROM email_log')->fetchColumn();
+    $emailsOk = (int)$pdo->query("SELECT COUNT(*) FROM email_log WHERE status='sent'")->fetchColumn();
+    $byType   = $pdo->query("SELECT event_type, COUNT(*) AS n FROM tracking_events GROUP BY event_type ORDER BY n DESC")->fetchAll();
+    $byWinner = $pdo->query("SELECT final_winner, COUNT(*) AS n FROM tracking_sessions WHERE final_winner IS NOT NULL GROUP BY final_winner ORDER BY n DESC")->fetchAll();
+    $recent   = $pdo->query("SELECT id, started_at, last_event_at, events_count, final_winner, email FROM tracking_sessions ORDER BY started_at DESC LIMIT 20")->fetchAll();
+    return [
+        'sessions_total'     => $sessions,
+        'sessions_finished'  => $finished,
+        'events_total'       => $events,
+        'emails_total'       => $emails,
+        'emails_sent_ok'     => $emailsOk,
+        'events_by_type'     => $byType,
+        'sessions_by_winner' => $byWinner,
+        'recent_sessions'    => $recent,
+    ];
+}
+
+function statsSessions($cfg): array {
+    $pdo = db($cfg); ensureTrackingTables($pdo);
+    $limit  = max(1, min(500, (int)($_GET['limit']  ?? 100)));
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
+    $rows = $pdo->prepare('SELECT id, started_at, last_event_at, events_count, final_winner, email
+                           FROM tracking_sessions ORDER BY started_at DESC LIMIT ? OFFSET ?');
+    $rows->bindValue(1, $limit, PDO::PARAM_INT);
+    $rows->bindValue(2, $offset, PDO::PARAM_INT);
+    $rows->execute();
+    return ['rows' => $rows->fetchAll(), 'limit' => $limit, 'offset' => $offset];
+}
+
+function statsSession($cfg): array {
+    $pdo = db($cfg); ensureTrackingTables($pdo);
+    $sid = (string)($_GET['id'] ?? '');
+    if ($sid === '') fail(400, 'id required');
+    $session = $pdo->prepare('SELECT * FROM tracking_sessions WHERE id = ?');
+    $session->execute([$sid]);
+    $s = $session->fetch();
+    if (!$s) fail(404, 'session not found');
+    $events = $pdo->prepare('SELECT id, ts, ts_ms, event_type, payload FROM tracking_events WHERE session_id = ? ORDER BY id ASC');
+    $events->execute([$sid]);
+    $rows = $events->fetchAll();
+    foreach ($rows as &$r) decodeJsonFields($r, ['payload']);
+    $emails = $pdo->prepare('SELECT id, email, winner_id, winner_label, subject, sent_at, status, error FROM email_log WHERE session_id = ? ORDER BY id ASC');
+    $emails->execute([$sid]);
+    return ['session' => $s, 'events' => $rows, 'emails' => $emails->fetchAll()];
+}
+
+function statsEmails($cfg): array {
+    $pdo = db($cfg); ensureTrackingTables($pdo);
+    $limit  = max(1, min(500, (int)($_GET['limit']  ?? 100)));
+    $offset = max(0, (int)($_GET['offset'] ?? 0));
+    $rows = $pdo->prepare('SELECT id, session_id, email, winner_id, winner_label, subject, sent_at, status, error
+                           FROM email_log ORDER BY sent_at DESC LIMIT ? OFFSET ?');
+    $rows->bindValue(1, $limit, PDO::PARAM_INT);
+    $rows->bindValue(2, $offset, PDO::PARAM_INT);
+    $rows->execute();
+    return ['rows' => $rows->fetchAll(), 'limit' => $limit, 'offset' => $offset];
 }

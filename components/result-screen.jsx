@@ -1,4 +1,5 @@
 // ResultScreen — shown when the adaptive flow ends. Sections:
+//   0. Header row (title + small itinerary mandala + email box)
 //   1. Headline recommendation
 //   2. Hypothesis templates the researcher can adopt
 //   3. Conditions to defend
@@ -9,6 +10,8 @@
 //   8. Replicable methods recipe (existing component)
 //   9. Comparison to alternatives
 //  10. Reasoning trail
+
+const { useState } = React;
 
 // Build the list of "transformation conditions". For the recommended sector,
 // we walk every answered question and flag those whose chosen option
@@ -54,7 +57,136 @@ function buildTransformationConditions(history, winner) {
   return conditions;
 }
 
-window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone = 'serif-dark' }) {
+function buildEmailHtml({ winner, history, scores, transformations, top3, total }) {
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const css = `
+    body { font-family: Georgia, 'EB Garamond', serif; color: #1a1a1a; background: #fafaf6; margin: 0; padding: 0; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 28px 24px; }
+    h1 { font-size: 26px; margin: 0 0 4px; color: #0e1530; font-weight: 500; }
+    h2 { font-size: 16px; letter-spacing: 0.18em; text-transform: uppercase;
+         color: #5e6680; margin: 28px 0 10px; font-weight: 500; font-style: italic; }
+    .sub { font-style: italic; color: #5e6680; font-size: 16px; margin: 0 0 18px; }
+    p { line-height: 1.55; }
+    ul { padding-left: 20px; margin: 0; }
+    li { margin: 4px 0; line-height: 1.5; }
+    .card { background: #fff; border: 1px solid rgba(26,37,64,0.15); border-radius: 6px;
+            padding: 16px 18px; margin: 10px 0; }
+    .trail { border-left: 2px solid rgba(26,37,64,0.2); padding-left: 14px; margin: 6px 0 14px; }
+    .trail-q { font-style: italic; color: #5e6680; font-size: 13px; }
+    .trail-a { font-size: 14px; color: #0e1530; margin-top: 2px; }
+    .author { display:block; padding: 8px 0; border-top: 1px solid rgba(26,37,64,0.1); }
+    .author:first-child { border-top:none; }
+    .author-name { font-weight: 500; color: #0e1530; }
+    .author-work { font-style: italic; color: #5e6680; font-size: 13px; }
+    a { color: #1a2540; }
+    .footer { margin-top: 28px; font-size: 12px; color: #5e6680; font-style: italic;
+              border-top: 1px solid rgba(26,37,64,0.15); padding-top: 14px; }
+  `;
+  const hyps = (winner.hypotheses || []).map(h => `<li>${esc(h)}</li>`).join('');
+  const conds = (winner.conditions || []).map(c => `<li>${esc(c)}</li>`).join('');
+  const techs = (winner.techniques || []).map(t => `<li>${esc(t)}</li>`).join('');
+  const ass   = (winner.assumes || []).map(a => `<li>${esc(a)}</li>`).join('');
+  const sw    = (winner.software || []).map(s => `<li>${esc(s)}</li>`).join('');
+  const proc  = (winner.procedure || []).map(p => `<li>${esc(p)}</li>`).join('');
+  const auths = (winner.authors || []).map(a => `
+    <div class="author">
+      <div class="author-name">${esc(a.name)}${a.url ? ` &nbsp;<a href="${esc(a.url)}">↗</a>` : ''}</div>
+      <div class="author-work">${esc(a.work || '')}</div>
+      ${a.why ? `<div style="font-size:13px;color:#5e6680;margin-top:2px;">${esc(a.why)}</div>` : ''}
+    </div>`).join('');
+  const refs = (winner.keyRefs || []).map(r => `<li>${esc(r)}</li>`).join('');
+  const trail = (history || []).map(h => `
+    <div class="trail">
+      <div class="trail-q">${esc(h.questionId)} · ${esc(h.questionText)}</div>
+      <div class="trail-a">→ ${esc(h.answerLabel)}</div>
+    </div>`).join('');
+  const trans = (transformations || []).length ? `
+    <h2>Conditions for switching to ${esc(winner.label)}</h2>
+    <p style="font-style:italic;color:#5e6680;font-size:14px;">
+      Some of your answers carry a 0 weight for ${esc(winner.label)}. To apply this
+      technique you would need to revisit the design points below.
+    </p>
+    ${transformations.map(t => `
+      <div class="card">
+        <div style="font-style:italic;font-size:13px;color:#5e6680;">${esc(t.questionId)} · ${esc(t.questionText)}</div>
+        <div style="margin-top:6px;"><strong>You chose:</strong> <em>${esc(t.chosen)}</em></div>
+        <div style="margin-top:4px;"><strong>The recommendation would be:</strong>
+          <ul>${t.better.map(b => `<li><em>${esc(b.label)}</em></li>`).join('')}</ul>
+        </div>
+      </div>
+    `).join('')}
+  ` : '';
+  const cmp = (top3 || []).map((c, i) => `
+    <div class="card" style="${i === 0 ? 'background:#1a2540;color:#fafaf6;' : ''}">
+      <div style="font-size:11px;letter-spacing:0.1em;color:${i === 0 ? '#cfe1ff' : '#5e6680'};">0${i + 1}</div>
+      <div style="font-size:18px;margin:4px 0;">${esc(c.label)}</div>
+      <div style="font-size:13px;color:${i === 0 ? '#cfe1ff' : '#5e6680'};font-style:italic;">${esc(c.sub)} — ${(c.score / total * 100).toFixed(0)}% match</div>
+    </div>`).join('');
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(winner.label)}</title>
+<style>${css}</style></head><body>
+<div class="wrap">
+  <p style="font-style:italic;letter-spacing:0.18em;text-transform:uppercase;color:#5e6680;font-size:11px;margin:0 0 6px;">Method Atlas — Recommendation</p>
+  <h1>${esc(winner.label)}</h1>
+  <p class="sub">${esc(winner.goal || winner.sub || '')}</p>
+  ${winner.description ? `<p>${esc(winner.description)}</p>` : ''}
+
+  ${hyps ? `<h2>Hypothesis templates you can adopt</h2><ul>${hyps}</ul>` : ''}
+  ${conds ? `<h2>When this technique is the right call</h2><ul>${conds}</ul>` : ''}
+  ${techs ? `<h2>Top candidate techniques</h2><ul>${techs}</ul>` : ''}
+  ${ass ? `<h2>Assumptions to defend</h2><ul>${ass}</ul>` : ''}
+  ${sw ? `<h2>Suggested software</h2><ul>${sw}</ul>` : ''}
+  ${proc ? `<h2>Procedural checklist</h2><ol>${proc}</ol>` : ''}
+  ${auths ? `<h2>Recommended authors</h2><div class="card">${auths}</div>` : ''}
+  ${refs ? `<h2>Foundational references</h2><ul>${refs}</ul>` : ''}
+  ${trans}
+  ${cmp ? `<h2>Alternative candidates</h2>${cmp}` : ''}
+  ${trail ? `<h2>Your reasoning trail</h2>${trail}` : ''}
+
+  <div class="footer">
+    Generated by Method Atlas — Entrepreneur Research · upo.digital
+  </div>
+</div></body></html>`;
+}
+
+function buildEmailText({ winner, history, top3, total }) {
+  const lines = [];
+  lines.push(`METHOD ATLAS — RECOMMENDATION`);
+  lines.push('='.repeat(40));
+  lines.push(winner.label);
+  if (winner.goal) lines.push(winner.goal);
+  if (winner.description) lines.push('\n' + winner.description);
+  if ((winner.hypotheses || []).length) {
+    lines.push('\nHypothesis templates:');
+    winner.hypotheses.forEach((h, i) => lines.push(`  H${i + 1}. ${h}`));
+  }
+  if ((winner.techniques || []).length) {
+    lines.push('\nTop candidate techniques:');
+    winner.techniques.forEach(t => lines.push(`  - ${t}`));
+  }
+  if ((winner.assumes || []).length) {
+    lines.push('\nAssumptions to defend:');
+    winner.assumes.forEach(a => lines.push(`  - ${a}`));
+  }
+  if ((winner.authors || []).length) {
+    lines.push('\nRecommended authors:');
+    winner.authors.forEach(a => lines.push(`  - ${a.name} — ${a.work || ''} ${a.url ? '(' + a.url + ')' : ''}`));
+  }
+  if ((history || []).length) {
+    lines.push('\nYour reasoning trail:');
+    history.forEach(h => lines.push(`  ${h.questionId}: ${h.questionText}\n    → ${h.answerLabel}`));
+  }
+  if ((top3 || []).length) {
+    lines.push('\nAlternatives:');
+    top3.forEach((c, i) => lines.push(`  0${i + 1}. ${c.label} — ${(c.score / total * 100).toFixed(0)}% match`));
+  }
+  lines.push('\n— Method Atlas · Entrepreneur Research · upo.digital');
+  return lines.join('\n');
+}
+
+window.ResultScreen = function ResultScreen({ scores, history, onRestart, onAlternativeClick, onTrack, sessionId, tone = 'serif-dark' }) {
   const sectors = window.TAXONOMY.sectors;
   const ranked = [...sectors]
     .map(s => ({ ...s, score: scores[s.id] || 0 }))
@@ -65,15 +197,104 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
   const total = top3.reduce((a, b) => a + b.score, 0) || 1;
   const transformations = buildTransformationConditions(history, winner);
 
+  const [email, setEmail] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState(null);
+
+  const sendEmail = async () => {
+    if (emailBusy) return;
+    const value = (email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) {
+      setEmailMsg({ ok: false, text: 'Please enter a valid email address.' });
+      return;
+    }
+    setEmailBusy(true);
+    setEmailMsg(null);
+    try {
+      const html = buildEmailHtml({ winner, history, scores, transformations, top3, total });
+      const text = buildEmailText({ winner, history, top3, total });
+      const subject = `Method Atlas — Your recommendation: ${winner.label}`;
+      const res = await fetch('./api.php?action=send_email', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId || null,
+          email: value,
+          winner_id: winner.id,
+          winner_label: winner.label,
+          subject,
+          html_body: html,
+          text_body: text,
+          payload: {
+            history: (history || []).map(h => ({
+              questionId: h.questionId, answerLabel: h.answerLabel, optionIdx: h.optionIdx,
+            })),
+            top3: top3.map(c => ({ id: c.id, label: c.label, score: c.score })),
+            scores,
+          },
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      setEmailMsg({ ok: true, text: 'Email sent. Check your inbox (and spam folder if you do not see it).' });
+      if (onTrack) onTrack('email_send', { email: value, winner_id: winner.id, status: 'sent' });
+    } catch (e) {
+      setEmailMsg({ ok: false, text: 'Could not send: ' + (e.message || String(e)) });
+      if (onTrack) onTrack('email_send_error', { email: value, error: String(e.message || e) });
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
   return (
     <div className={`result-screen tone-${tone}`}>
       <div className="result-inner">
-        <div className="result-eyebrow">Recommendation</div>
-        <h1 className="result-title">
-          <span className="result-title-em" style={{ color: `oklch(0.7 0.22 ${winner.hue})` }}>{winner.label}</span>
-        </h1>
-        <div className="result-sub">{winner.goal}</div>
-        {winner.description && <p className="result-description">{winner.description}</p>}
+        {/* === Top header: title block on the left, mandala + email on the right === */}
+        <div className="result-header">
+          <div className="result-header-main">
+            <div className="result-eyebrow">Recommendation</div>
+            <h1 className="result-title">
+              <span className="result-title-em" style={{ color: `oklch(0.7 0.22 ${winner.hue})` }}>{winner.label}</span>
+            </h1>
+            <div className="result-sub">{winner.goal}</div>
+            {winner.description && <p className="result-description">{winner.description}</p>}
+          </div>
+          <aside className="result-header-aside">
+            <window.ItineraryMap
+              history={history}
+              scores={scores}
+              winnerId={winner.id}
+              tone={tone}
+              size={210}
+            />
+            <div className={`result-email-box ${emailMsg ? (emailMsg.ok ? 'ok' : 'err') : ''}`}>
+              <div className="result-email-eyebrow">Email this recommendation</div>
+              <p className="result-email-hint">
+                We can send you the full recommendation (with hypotheses, authors,
+                trail and alternatives) to your inbox.
+              </p>
+              <div className="result-email-row">
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@institution.edu"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  disabled={emailBusy}
+                  onKeyDown={e => { if (e.key === 'Enter') sendEmail(); }}
+                />
+                <button onClick={sendEmail} disabled={emailBusy || !email.trim()}>
+                  {emailBusy ? 'Sending…' : 'Send'}
+                </button>
+              </div>
+              {emailMsg && (
+                <div className={`result-email-msg ${emailMsg.ok ? 'ok' : 'err'}`}>{emailMsg.text}</div>
+              )}
+            </div>
+          </aside>
+        </div>
 
         {/* === Hypotheses & conditions === */}
         <div className="result-section">
@@ -159,9 +380,8 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
 
         {/* === Transformation conditions: design changes the researcher
               would need to make in order to actually apply the recommended
-              technique. Only shown when at least one of the user's answers
-              has weight 0 (or negative) for the winner while a different
-              answer to the same question would have supported it. === */}
+              technique. Clicking an alternative re-runs the recommendation
+              as if the user had picked that option. === */}
         {transformations.length > 0 && (
           <div className="result-section">
             <div className="result-section-eyebrow">
@@ -171,8 +391,9 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
               The recommendation above reflects the design choices you made.
               Some of those choices carry a <strong>0 weight</strong> for{' '}
               {winner.label} — meaning, in their current form, they are not
-              compatible with this technique. To actually apply it you would
-              need to <em>transform your design</em> on the points listed below.
+              compatible with this technique. <strong>Click any alternative
+              below</strong> and we will recompute the recommendation as if
+              you had chosen that option instead.
             </p>
             <ul className="trans-list">
               {transformations.map((t, i) => (
@@ -187,10 +408,19 @@ window.ResultScreen = function ResultScreen({ scores, history, onRestart, tone =
                     <em>"{t.chosen}"</em>
                   </div>
                   <div className="trans-to">
-                    <span className="trans-label">Switch to:</span>
+                    <span className="trans-label">The recommendation would be:</span>
                     <ul className="trans-alt-list">
                       {t.better.map((b, j) => (
-                        <li key={j}><em>"{b.label}"</em></li>
+                        <li key={j}>
+                          <button
+                            type="button"
+                            className="trans-alt-btn"
+                            onClick={() => onAlternativeClick && onAlternativeClick(t.questionId, b.idx)}
+                            title="Recompute the recommendation with this answer">
+                            <em>"{b.label}"</em>
+                            <span className="trans-alt-cta">use this answer ↻</span>
+                          </button>
+                        </li>
                       ))}
                     </ul>
                   </div>

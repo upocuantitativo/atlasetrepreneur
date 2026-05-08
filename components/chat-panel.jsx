@@ -31,7 +31,8 @@ const SUGGESTED_MODELS = [
   'gemma2-9b-it',
 ];
 
-window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onToggle }) {
+window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onToggle, onTrack, sessionId }) {
+  const track = onTrack || (() => {});
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -85,6 +86,14 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
     const next = [...messages, userMsg];
     setMessages(next);
     setBusy(true);
+    track('chat_question', {
+      content,
+      contextKind: context && context.kind,
+      contextId: context && context.kind === 'question' ? (context.question && context.question.id)
+                : context && context.kind === 'result' ? (context.winner && context.winner.id)
+                : null,
+      turnIdx: next.length,
+    });
     try {
       // Keep only the last 8 messages to stay well under Groq's 6,000 TPM
       // free-tier limit. The system prompt already carries the relevant
@@ -96,7 +105,17 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
         max_tokens: 512,
       });
       setMessages([...next, { role: 'assistant', content: reply }]);
-    } catch (e) { setError(humaniseError(e.message || String(e))); }
+      track('chat_reply', {
+        content: reply,
+        contextKind: context && context.kind,
+        replyChars: (reply || '').length,
+        turnIdx: next.length + 1,
+      });
+    } catch (e) {
+      const msg = humaniseError(e.message || String(e));
+      setError(msg);
+      track('chat_error', { error: msg });
+    }
     finally { setBusy(false); }
   };
 
@@ -138,6 +157,10 @@ window.ChatPanel = function ChatPanel({ context, tone = 'serif-dark', open, onTo
       cleanup();
       const ctx = extractContextFrom(el);
       if (!ctx || ctx.text.length < 5) return;
+      track('chat_drag_help', {
+        target: ctx.text.slice(0, 240),
+        tag: ctx.tag || null,
+      });
       send(`Explain this concept in the context of the Method Atlas, briefly: "${ctx.text}"`);
     };
     window.addEventListener('pointermove', onMove);

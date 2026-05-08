@@ -50,6 +50,30 @@ main { padding: 24px; max-width: 1400px; margin: 0 auto; display:grid; grid-temp
 .flash.ok { background:#d8f1d4; color:#2a5e2a; }
 .flash.err { background:#f5d6d6; color:#7a1f1f; }
 
+.stats-summary { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.stats-card { background:#fff; border:1px solid rgba(26,37,64,0.12); border-radius:8px; padding:14px 16px; }
+.stats-card .stats-num { font-family: var(--serif); font-size: 30px; line-height: 1; color: #0e1530; font-weight: 500; }
+.stats-card .stats-label { font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #5e6680; margin-top: 6px; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stats-table th, .stats-table td { padding: 6px 10px; border-bottom: 1px solid rgba(26,37,64,0.08); text-align: left; vertical-align: top; }
+.stats-table th { font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #5e6680; background: #fafaf6; }
+.stats-table tr.row-link { cursor: pointer; }
+.stats-table tr.row-link:hover { background: #f5f4ef; }
+.stats-grid-2col { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.stats-event-list { font-family: var(--mono); font-size: 12px; line-height: 1.45; max-height: 60vh; overflow:auto; padding-right:6px; }
+.stats-event { padding: 4px 0; border-bottom: 1px dashed rgba(26,37,64,0.08); }
+.stats-event-type { display: inline-block; padding: 1px 6px; background: #1a2540; color: #fafaf0; border-radius: 3px; font-size: 11px; letter-spacing: 0.05em; margin-right: 6px; }
+.stats-event-type.t-answer { background: #2a5e2a; }
+.stats-event-type.t-back, .stats-event-type.t-jump { background: #c0392b; }
+.stats-event-type.t-chat_question, .stats-event-type.t-chat_reply, .stats-event-type.t-chat_drag_help, .stats-event-type.t-chat_open, .stats-event-type.t-chat_close, .stats-event-type.t-chat_error { background: #4f7cff; }
+.stats-event-type.t-recommendation_shown { background: #8e44ad; }
+.stats-event-type.t-email_send { background: #d68910; }
+.stats-event-time { color: #5e6680; font-size: 11px; }
+.stats-event-payload { color: #1a2540; white-space: pre-wrap; word-break: break-word; }
+.stats-toolbar { display:flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.stats-toolbar h3 { margin: 0; font-weight: 500; }
+.stats-empty { color:#5e6680; font-style: italic; padding: 20px; text-align: center; }
+
 .options-table { width:100%; border-collapse: collapse; margin-top:8px; }
 .options-table th, .options-table td { text-align:left; padding:6px 8px; border-bottom: 1px solid rgba(26,37,64,0.08); font-size: 13px; vertical-align: top; }
 .options-table th { font-family: var(--sans); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color:#5e6680; }
@@ -284,6 +308,202 @@ function QuestionEditor({ question, options, sectors, onSaveQuestion, onSaveOpti
   );
 }
 
+function StatsTab() {
+  const [summary, setSummary] = useState(null);
+  const [sessions, setSessions] = useState(null);
+  const [emails, setEmails] = useState(null);
+  const [picked, setPicked] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [view, setView] = useState('summary'); // summary | sessions | emails
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const reload = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const [s, ses, em] = await Promise.all([
+        api('stats_summary'),
+        api('stats_sessions'),
+        api('stats_emails'),
+      ]);
+      setSummary(s); setSessions(ses); setEmails(em);
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { reload(); }, []);
+
+  const openSession = async (id) => {
+    setPicked(id); setDetail(null);
+    try {
+      const r = await fetch(`${API}?action=stats_session&id=${encodeURIComponent(id)}`, { credentials: 'same-origin' });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      setDetail(j);
+    } catch (e) { setErr(e.message); }
+  };
+
+  const fmt = (s) => s ? new Date(s.replace(' ', 'T') + 'Z').toLocaleString() : '—';
+  const fmtMs = (ms) => ms ? new Date(ms).toLocaleString() : '—';
+
+  if (busy && !summary) return <div style={{padding:48}}>Loading stats…</div>;
+  if (err) return <div style={{padding:24, gridColumn:'1 / -1'}} className="flash err">{err}</div>;
+  if (!summary) return null;
+
+  return (
+    <div style={{gridColumn:'1 / -1'}}>
+      <div className="stats-toolbar">
+        <button className={`tab ${view==='summary'?'active':''}`} onClick={()=>setView('summary')}>Summary</button>
+        <button className={`tab ${view==='sessions'?'active':''}`} onClick={()=>setView('sessions')}>Sessions ({summary.sessions_total})</button>
+        <button className={`tab ${view==='emails'?'active':''}`} onClick={()=>setView('emails')}>Emails ({summary.emails_total})</button>
+        <button className="btn ghost" style={{marginLeft:'auto'}} onClick={reload} disabled={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
+
+      {view === 'summary' && (
+        <div className="editor">
+          <div className="stats-summary">
+            <div className="stats-card"><div className="stats-num">{summary.sessions_total}</div><div className="stats-label">Sessions</div></div>
+            <div className="stats-card"><div className="stats-num">{summary.sessions_finished}</div><div className="stats-label">Reached recommendation</div></div>
+            <div className="stats-card"><div className="stats-num">{summary.events_total}</div><div className="stats-label">Total events</div></div>
+            <div className="stats-card"><div className="stats-num">{summary.emails_sent_ok}<span style={{fontSize:14,color:'#5e6680'}}> / {summary.emails_total}</span></div><div className="stats-label">Emails sent OK</div></div>
+          </div>
+
+          <div className="stats-grid-2col">
+            <div>
+              <h3 style={{marginTop:0}}>Events by type</h3>
+              <table className="stats-table">
+                <thead><tr><th>Event</th><th style={{textAlign:'right'}}>Count</th></tr></thead>
+                <tbody>
+                  {(summary.events_by_type || []).map(r => (
+                    <tr key={r.event_type}><td>{r.event_type}</td><td style={{textAlign:'right'}}>{r.n}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3 style={{marginTop:0}}>Recommended winners</h3>
+              <table className="stats-table">
+                <thead><tr><th>Sector</th><th style={{textAlign:'right'}}>Sessions</th></tr></thead>
+                <tbody>
+                  {(summary.sessions_by_winner || []).map(r => (
+                    <tr key={r.final_winner}><td>{r.final_winner}</td><td style={{textAlign:'right'}}>{r.n}</td></tr>
+                  ))}
+                  {(!summary.sessions_by_winner || summary.sessions_by_winner.length === 0) &&
+                    <tr><td colSpan={2}><div className="stats-empty">No completed sessions yet.</div></td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <h3>Recent sessions</h3>
+          <table className="stats-table">
+            <thead><tr><th>Started</th><th>Last event</th><th>Events</th><th>Winner</th><th>Email</th><th>ID</th></tr></thead>
+            <tbody>
+              {(summary.recent_sessions || []).map(s => (
+                <tr key={s.id} className="row-link" onClick={()=>{ setView('sessions'); openSession(s.id); }}>
+                  <td>{fmt(s.started_at)}</td>
+                  <td>{fmt(s.last_event_at)}</td>
+                  <td>{s.events_count}</td>
+                  <td>{s.final_winner || <em style={{color:'#5e6680'}}>—</em>}</td>
+                  <td>{s.email || <em style={{color:'#5e6680'}}>—</em>}</td>
+                  <td style={{fontFamily:'var(--mono)',fontSize:11}}>{(s.id || '').slice(0, 12)}…</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {view === 'sessions' && (
+        <div style={{display:'grid', gridTemplateColumns:'320px 1fr', gap:16}}>
+          <div className="panel">
+            <table className="stats-table">
+              <thead><tr><th>Started</th><th>Events</th><th>Winner</th></tr></thead>
+              <tbody>
+                {(sessions?.rows || []).map(s => (
+                  <tr key={s.id} className={`row-link ${picked===s.id?'active':''}`}
+                      onClick={()=>openSession(s.id)}
+                      style={picked===s.id?{background:'#1a2540',color:'#fafaf0'}:undefined}>
+                    <td>{fmt(s.started_at)}</td>
+                    <td>{s.events_count}</td>
+                    <td>{s.final_winner || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="editor">
+            {!picked && <div className="stats-empty">Pick a session on the left.</div>}
+            {picked && !detail && <div className="stats-empty">Loading…</div>}
+            {detail && (
+              <>
+                <h2 style={{marginTop:0}}>Session <span style={{fontFamily:'var(--mono)',fontSize:14,color:'#5e6680'}}>{detail.session.id}</span></h2>
+                <div style={{fontSize:13,color:'#5e6680',marginBottom:14}}>
+                  Started {fmt(detail.session.started_at)} · Last event {fmt(detail.session.last_event_at)} · {detail.session.events_count} events
+                  {detail.session.final_winner && <> · Winner: <strong>{detail.session.final_winner}</strong></>}
+                  {detail.session.email && <> · Email: <strong>{detail.session.email}</strong></>}
+                </div>
+                <h3 style={{marginTop:18}}>Events ({detail.events.length})</h3>
+                <div className="stats-event-list">
+                  {detail.events.map(ev => (
+                    <div key={ev.id} className="stats-event">
+                      <span className={`stats-event-type t-${ev.event_type}`}>{ev.event_type}</span>
+                      <span className="stats-event-time">{fmtMs(ev.ts_ms) || fmt(ev.ts)}</span>
+                      {ev.payload && (
+                        <div className="stats-event-payload">{JSON.stringify(ev.payload, null, 2)}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {detail.emails && detail.emails.length > 0 && (
+                  <>
+                    <h3>Emails sent</h3>
+                    <table className="stats-table">
+                      <thead><tr><th>Sent at</th><th>To</th><th>Winner</th><th>Status</th></tr></thead>
+                      <tbody>
+                        {detail.emails.map(e => (
+                          <tr key={e.id}>
+                            <td>{fmt(e.sent_at)}</td>
+                            <td>{e.email}</td>
+                            <td>{e.winner_label || e.winner_id || '—'}</td>
+                            <td>{e.status}{e.error ? ` — ${e.error}` : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {view === 'emails' && (
+        <div className="editor">
+          <h3 style={{marginTop:0}}>Emails sent ({(emails?.rows || []).length})</h3>
+          <table className="stats-table">
+            <thead><tr><th>Sent at</th><th>To</th><th>Winner</th><th>Subject</th><th>Status</th><th>Session</th></tr></thead>
+            <tbody>
+              {(emails?.rows || []).map(e => (
+                <tr key={e.id} className="row-link" onClick={()=>{ setView('sessions'); openSession(e.session_id); }}>
+                  <td>{fmt(e.sent_at)}</td>
+                  <td>{e.email}</td>
+                  <td>{e.winner_label || e.winner_id || '—'}</td>
+                  <td>{e.subject}</td>
+                  <td>{e.status}{e.error ? ` — ${e.error}` : ''}</td>
+                  <td style={{fontFamily:'var(--mono)',fontSize:11}}>{(e.session_id || '').slice(0, 10)}…</td>
+                </tr>
+              ))}
+              {(!emails || emails.rows.length === 0) &&
+                <tr><td colSpan={6}><div className="stats-empty">No emails sent yet.</div></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [authed, setAuthed] = useState(false);
   const [data, setData] = useState(null);
@@ -342,9 +562,12 @@ function App() {
       <div className="tabs">
         <button className={`tab ${tab==='sectors'?'active':''}`} onClick={()=>setTab('sectors')}>Techniques ({data.sectors.length})</button>
         <button className={`tab ${tab==='questions'?'active':''}`} onClick={()=>setTab('questions')}>Questions ({data.questions.length})</button>
+        <button className={`tab ${tab==='stats'?'active':''}`} onClick={()=>setTab('stats')}>Stats &amp; usage</button>
       </div>
       <main>
-        {tab==='sectors' ? (
+        {tab==='stats' ? (
+          <StatsTab />
+        ) : tab==='sectors' ? (
           <>
             <div className="panel">
               {data.sectors.map(s => (

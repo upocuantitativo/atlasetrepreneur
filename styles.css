@@ -124,22 +124,21 @@ body { background: #f5f4ef; color: #1a1a1a; }
 .tone-editorial .brand-sub { color: #5e6680; }
 
 /* ==== Mini map ==== */
+/* No background or border — the wedges float over the big mandala disc so
+   the circle never looks "cut off" by an opaque card at the top right. */
 .mini-map {
-  background: rgba(8, 12, 28, 0.55);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(155, 176, 216, 0.18);
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
 }
 .mini-title {
   font-family: var(--serif); font-style: italic;
   font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
   color: #9bb0d8; margin-bottom: 4px;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.55);
 }
-.tone-serif-paper .mini-map { background: rgba(247, 241, 227, 0.85); border-color: rgba(58, 42, 24, 0.18); }
-.tone-serif-paper .mini-title { color: #5a4530; }
-.tone-editorial .mini-map { background: rgba(255,255,255,0.85); border-color: rgba(26, 37, 64, 0.15); }
-.tone-editorial .mini-title { color: #1a2540; }
+.tone-serif-paper .mini-title { color: #5a4530; text-shadow: 0 1px 8px rgba(255, 250, 235, 0.7); }
+.tone-editorial .mini-title { color: #1a2540; text-shadow: 0 1px 8px rgba(255, 255, 255, 0.85); }
 
 /* ==== Breadcrumbs ==== */
 .breadcrumbs {
@@ -625,6 +624,128 @@ body { background: #f5f4ef; color: #1a1a1a; }
   .breadcrumbs { max-width: 100%; }
 }
 
+/* ==== Result screen — header row (title + mandala + email box) ==== */
+.result-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 36px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+.result-header-main { min-width: 0; }
+.result-header-aside {
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: stretch;
+  position: sticky; top: 16px;
+}
+@media (max-width: 900px) {
+  .result-header { grid-template-columns: 1fr; }
+  .result-header-aside { position: static; align-items: center; }
+  .result-header-aside .itinerary-map,
+  .result-header-aside .result-email-box { width: 100%; max-width: 360px; }
+}
+
+/* Itinerary mini-mandala — fully transparent so the circle floats over the
+   result-screen background instead of being framed inside an opaque card. */
+.itinerary-map {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: center;
+}
+.itinerary-map svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+.itinerary-title {
+  font-family: var(--serif); font-style: italic;
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: #9bb0d8; margin-bottom: 6px;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.55);
+}
+.itinerary-legend {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+  color: #cfe1ff; margin-top: 4px; opacity: 0.85;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.45);
+}
+.tone-serif-paper .itinerary-title { color: #5a4530; text-shadow: 0 1px 8px rgba(255, 250, 235, 0.7); }
+.tone-serif-paper .itinerary-legend { color: #3a2a18; text-shadow: 0 1px 6px rgba(255, 250, 235, 0.7); }
+.tone-editorial .itinerary-title { color: #5e6680; text-shadow: 0 1px 8px rgba(255, 255, 255, 0.85); }
+.tone-editorial .itinerary-legend { color: #1a2540; text-shadow: 0 1px 6px rgba(255, 255, 255, 0.85); }
+
+/* Email box */
+.result-email-box {
+  background: rgba(8, 12, 28, 0.55);
+  border: 1px solid rgba(155, 176, 216, 0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+  backdrop-filter: blur(10px);
+}
+.result-email-eyebrow {
+  font-family: var(--serif); font-style: italic;
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: #9bb0d8; margin-bottom: 6px;
+}
+.result-email-hint {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px; line-height: 1.45; color: #cfe1ff;
+  margin: 0 0 10px;
+}
+.result-email-row { display: flex; gap: 6px; align-items: stretch; }
+.result-email-row input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(20, 30, 60, 0.55);
+  border: 1px solid rgba(155, 176, 216, 0.30);
+  color: #f1f4ff;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: var(--serif); font-size: 14px;
+}
+.result-email-row input:focus { outline: none; border-color: #4f7cff; }
+.result-email-row button {
+  background: #4f7cff;
+  color: #fff;
+  border: none;
+  padding: 0 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--serif); font-size: 13px;
+  letter-spacing: 0.04em;
+  transition: background 0.15s;
+}
+.result-email-row button:hover:not(:disabled) { background: #6a9eff; }
+.result-email-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+.result-email-msg {
+  margin-top: 8px;
+  font-family: var(--serif); font-size: 12.5px; line-height: 1.4;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.result-email-msg.ok  { background: rgba(46, 125, 50, 0.18); color: #b6f1b6; border: 1px solid rgba(46, 125, 50, 0.4); }
+.result-email-msg.err { background: rgba(192, 57, 43, 0.18); color: #ffb4b4; border: 1px solid rgba(192, 57, 43, 0.4); }
+
+.tone-serif-paper .result-email-box { background: rgba(255, 252, 240, 0.85); border-color: rgba(58, 42, 24, 0.22); }
+.tone-serif-paper .result-email-eyebrow { color: #5a4530; }
+.tone-serif-paper .result-email-hint { color: #3a2a18; }
+.tone-serif-paper .result-email-row input { background: #fffaf0; border-color: rgba(58, 42, 24, 0.25); color: #1a1208; }
+.tone-serif-paper .result-email-row button { background: #c0392b; }
+.tone-serif-paper .result-email-row button:hover:not(:disabled) { background: #a93022; }
+.tone-serif-paper .result-email-msg.ok  { background: rgba(46, 125, 50, 0.10); color: #2a5e2a; border-color: rgba(46, 125, 50, 0.35); }
+.tone-serif-paper .result-email-msg.err { background: rgba(192, 57, 43, 0.10); color: #7a1f1f; border-color: rgba(192, 57, 43, 0.35); }
+
+.tone-editorial .result-email-box { background: #fff; border-color: rgba(26, 37, 64, 0.18); }
+.tone-editorial .result-email-eyebrow { color: #5e6680; }
+.tone-editorial .result-email-hint { color: #1a2540; }
+.tone-editorial .result-email-row input { background: #fafafa; border-color: rgba(26, 37, 64, 0.2); color: #0e1530; }
+.tone-editorial .result-email-row button { background: #1a2540; }
+.tone-editorial .result-email-row button:hover:not(:disabled) { background: #0e1530; }
+.tone-editorial .result-email-msg.ok  { background: rgba(46, 125, 50, 0.08); color: #1d5a1d; border-color: rgba(46, 125, 50, 0.30); }
+.tone-editorial .result-email-msg.err { background: rgba(192, 57, 43, 0.08); color: #8a2020; border-color: rgba(192, 57, 43, 0.30); }
+
+/* The header now lives inside the content area, so adjust title/sub to
+   sit a bit tighter above the rest of the result. */
+.result-header .result-title { margin-bottom: 12px; }
+.result-header .result-sub   { margin-bottom: 22px; }
+.result-header .result-description { margin-bottom: 0; }
+
 /* ==== Result screen — extended sections ==== */
 .result-description {
   font-family: var(--serif); font-size: 17px; line-height: 1.6;
@@ -733,6 +854,56 @@ body { background: #f5f4ef; color: #1a1a1a; }
   left: 0;
   color: inherit;
   opacity: 0.7;
+}
+.trans-alt-btn {
+  display: inline-flex; align-items: baseline; gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: rgba(180, 255, 180, 0.08);
+  border: 1px dashed rgba(180, 255, 180, 0.45);
+  color: inherit;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.trans-alt-btn:hover {
+  background: rgba(180, 255, 180, 0.18);
+  border-color: rgba(180, 255, 180, 0.80);
+  border-style: solid;
+  transform: translateX(2px);
+}
+.trans-alt-btn:focus-visible {
+  outline: 2px solid rgba(180, 255, 180, 0.8);
+  outline-offset: 2px;
+}
+.trans-alt-cta {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.tone-serif-paper .trans-alt-btn {
+  background: rgba(46, 125, 50, 0.08);
+  border-color: rgba(46, 125, 50, 0.4);
+}
+.tone-serif-paper .trans-alt-btn:hover {
+  background: rgba(46, 125, 50, 0.18);
+  border-color: rgba(46, 125, 50, 0.7);
+}
+.tone-editorial .trans-alt-btn {
+  background: rgba(46, 125, 50, 0.06);
+  border-color: rgba(46, 125, 50, 0.35);
+}
+.tone-editorial .trans-alt-btn:hover {
+  background: rgba(46, 125, 50, 0.14);
+  border-color: rgba(46, 125, 50, 0.65);
 }
 .tone-serif-paper .trans-item { background: rgba(192, 57, 43, 0.08); color: #1a1208; }
 .tone-serif-paper .trans-q { color: #1a1208; }
