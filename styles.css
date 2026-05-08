@@ -44,10 +44,13 @@ body { background: #f5f4ef; color: #1a1a1a; }
    its own, so the disc shows through behind the title. */
 .overlay-top, .overlay-mid { background: transparent !important; }
 .mandala-plane {
-  /* Scale the disc up so it fills more of the viewport without bleeding past
-     the header / dialog. */
-  width: min(95vmin, 1150px) !important;
-  height: min(95vmin, 1150px) !important;
+  /* Disc size: capped so the disc's TOP rim stays clearly below the brand
+     header and its BOTTOM rim stays above the dialog bar. The viewport
+     constraint (88vh combined with the 28° X-tilt → ~77vh projected
+     height) leaves ~12vh for the header on top and ~11vh for the dialog
+     at the bottom. */
+  width: min(80vmin, 88vh, 1000px) !important;
+  height: min(80vmin, 88vh, 1000px) !important;
 }
 /* (path layer no longer used — path is drawn inside the disc SVG so it
    sits exactly on the visible rings) */
