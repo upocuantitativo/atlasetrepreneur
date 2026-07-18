@@ -70,17 +70,10 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
 
     const built = history.map((h, idx) => {
       Object.entries(h.weights || {}).forEach(([k, v]) => { acc[k] = (acc[k] || 0) + v; });
-      // centroid angle from all sectors with non-zero score (vector sum)
-      let sumX = 0, sumY = 0, totalScore = 0;
-      for (const sec of sectors) {
-        const score = acc[sec.id] || 0;
-        if (score <= 0) continue;
-        const ang = (sec.angle - 90) * Math.PI / 180;
-        sumX += score * Math.cos(ang);
-        sumY += score * Math.sin(ang);
-        totalScore += score;
-      }
-      const angleRad = totalScore > 0 ? Math.atan2(sumY, sumX) : -Math.PI / 2;
+      // Vertex angle: score centroid CLAMPED into the current leader's
+      // wedge (see vertexAngleForScores) so the dot always sits inside
+      // the sector that is being highlighted.
+      const { angleRad, sector } = vertexAngleForScores(acc, sectors);
 
       // Radius from this question's ring band + sub-slot
       const ring = Math.max(0, Math.min(2, h.ring ?? 0));
@@ -94,9 +87,6 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
 
       const x = cx + radius * Math.cos(angleRad);
       const y = cy + radius * Math.sin(angleRad);
-      const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
-      const leaderId = ranked.length ? ranked[0][0] : null;
-      const sector = sectors.find(s => s.id === leaderId) || sectors[0];
       return {
         x, y, angleRad,
         sectorId: sector.id, hue: sector.hue,
@@ -267,21 +257,21 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                 transform={`rotate(${-rotZ}, ${lx}, ${ly})`}>
                 <text x={lx} y={ly}
                   fill={theme.label}
-                  fontSize={size * (isFocus ? 0.027 : 0.022)}
+                  fontSize={size * (isFocus ? 0.031 : 0.025)}
                   fontFamily={theme.serif}
                   textAnchor="middle"
                   fontWeight={isFocus ? 700 : 400}
                   letterSpacing="0.04em"
                   paintOrder="stroke"
                   stroke={theme.halo}
-                  strokeWidth={size * 0.006}
+                  strokeWidth={size * 0.0065}
                   strokeLinejoin="round"
                   style={{ textTransform: 'uppercase' }}>
                   {s.label}
                 </text>
-                <text x={lx} y={ly + size * 0.025}
+                <text x={lx} y={ly + size * 0.027}
                   fill={theme.labelDim}
-                  fontSize={size * 0.014}
+                  fontSize={size * 0.016}
                   fontFamily={theme.serif}
                   textAnchor="middle"
                   paintOrder="stroke"
@@ -313,7 +303,7 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
               <text key={`rlbl-${r.id}`}
                 x={x} y={y}
                 fill={theme.ringLabel}
-                fontSize={size * 0.013}
+                fontSize={size * 0.0145}
                 fontFamily={theme.serif}
                 textAnchor="middle"
                 fontStyle="italic"
@@ -364,21 +354,21 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
             const rotZRad = rotZ * Math.PI / 180;
             const screenAng = p.angleRad + rotZRad;
             const cosS = Math.cos(screenAng), sinS = Math.sin(screenAng);
-            const labelDist = size * 0.045;
+            const labelDist = size * 0.05;
             const ox = p.isLast ? 0 : labelDist * cosS;
-            const oy = p.isLast ? labelDist * 1.15 : labelDist * sinS;
+            const oy = p.isLast ? labelDist * 1.1 : labelDist * sinS;
             const anchor = p.isLast ? 'middle'
               : (cosS > 0.4 ? 'start' : cosS < -0.4 ? 'end' : 'middle');
             const baseline = p.isLast ? 'hanging'
               : (sinS > 0.5 ? 'hanging' : sinS < -0.5 ? 'auto' : 'middle');
             return (
               <g key={`pp-${i}`}>
-                <circle cx={p.x} cy={p.y} r={size * 0.018}
+                <circle cx={p.x} cy={p.y} r={size * 0.019}
                   fill="#000" stroke="#fff" strokeWidth={size * 0.0028} />
                 <text
-                  x={p.x} y={p.y + size * 0.006}
+                  x={p.x} y={p.y + size * 0.0065}
                   fill="#fff"
-                  fontSize={size * 0.015}
+                  fontSize={size * 0.017}
                   fontFamily={theme.serif}
                   textAnchor="middle"
                   fontWeight={700}
@@ -386,14 +376,14 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                 <text
                   x={p.x + ox} y={p.y + oy}
                   fill="#fff"
-                  fontSize={size * 0.022}
+                  fontSize={size * 0.026}
                   fontFamily={theme.serif}
                   fontWeight={600}
                   textAnchor={anchor}
                   dominantBaseline={baseline}
                   paintOrder="stroke"
                   stroke="#000"
-                  strokeWidth={size * 0.005}
+                  strokeWidth={size * 0.0058}
                   strokeLinejoin="round"
                   transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>
                   {p.label}
@@ -447,6 +437,41 @@ const TONES = {
 };
 
 window.MANDALA_TONES = TONES;
+
+// Vertex angle for a cumulative score map: the centroid (vector sum) of
+// all sector scores, CLAMPED into the wedge of the current leader (the
+// argmax sector — the same computation app.jsx uses for focusSector, so
+// highlight and dot can never disagree). Without the clamp the centroid
+// could fall inside a NEIGHBOURING wedge — e.g. scores regression:3,
+// plssem:2.5 put the dot visually inside PLS-SEM while Regression was
+// the shaded/leading sector. Exposed on window so the recursive
+// consistency test can drive the exact same code.
+function vertexAngleForScores(acc, sectors) {
+  let sumX = 0, sumY = 0, totalScore = 0;
+  for (const sec of sectors) {
+    const score = acc[sec.id] || 0;
+    if (score <= 0) continue;
+    const ang = (sec.angle - 90) * Math.PI / 180;
+    sumX += score * Math.cos(ang);
+    sumY += score * Math.sin(ang);
+    totalScore += score;
+  }
+  let angleRad = totalScore > 0 ? Math.atan2(sumY, sumX) : -Math.PI / 2;
+
+  const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
+  const leaderId = ranked.length ? ranked[0][0] : null;
+  const sector = sectors.find(s => s.id === leaderId) || sectors[0];
+
+  const span = 360 / sectors.length;
+  const centre = (sector.angle - 90) * Math.PI / 180;
+  const half = ((span / 2) - 4) * Math.PI / 180;   // 4° margin off the borders
+  let d = angleRad - centre;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  angleRad = centre + Math.max(-half, Math.min(half, d));
+  return { angleRad, sector };
+}
+window.__vertexAngleForScores = vertexAngleForScores;
 
 // Compress an answer label into ~3 words for plotting on the polyline.
 function shortAnswer(s) {

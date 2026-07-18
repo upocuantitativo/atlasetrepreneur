@@ -52,9 +52,11 @@ body { background: #f5f4ef; color: #1a1a1a; }
   /* Disc size: capped so the disc's TOP rim stays clearly below the brand
      header and its BOTTOM rim stays above the dialog bar. The mandala-
      stage already reserves padding for both, so vmin can be a bit more
-     generous than the bare viewport. */
-  width: min(82vmin, 1000px) !important;
-  height: min(82vmin, 1000px) !important;
+     generous than the bare viewport. (Bumped from 82vmin/1000px: after
+     the SVG started filling this box exactly, the disc — and with it the
+     itinerary labels — rendered smaller than before.) */
+  width: min(90vmin, 1100px) !important;
+  height: min(90vmin, 1100px) !important;
 }
 /* (path layer no longer used — path is drawn inside the disc SVG so it
    sits exactly on the visible rings) */

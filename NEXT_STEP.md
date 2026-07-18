@@ -1,5 +1,24 @@
 # NEXT_STEP
 
+## Hecho (2026-07-18, 2ª tanda)
+- **Rueda más grande y letra mayor** (feedback del usuario tras la 1ª tanda):
+  plano `min(90vmin, 1100px)` (antes 82vmin/1000px) y subida de fuentes en
+  `mandala.jsx`: etiquetas de itinerario 0.022→0.026, sector 0.022→0.025
+  (foco 0.027→0.031), sub 0.014→0.016, anillo 0.013→0.0145, nº de vértice
+  0.015→0.017.
+- **Punto vs sector sombreado coherentes**: el vértice usaba el ángulo
+  centroide puro y podía caer en la cuña vecina (p.ej. punto en PLS-SEM con
+  Regression sombreado). Ahora `vertexAngleForScores()` (module-level,
+  expuesta como `window.__vertexAngleForScores`) clampa el centroide dentro
+  de la cuña del líder (argmax, mismo criterio que `focusSector` en app.jsx)
+  con 4° de margen. **Comprobación recursiva** sobre el árbol de preguntas
+  (exhaustiva 4 niveles + muestreo hasta 8): 24.556 estados, 0 violaciones,
+  desviación máx 18,5° < 22,5° (media cuña).
+- Reproducido y verificado el caso reportado (Q1-A + Q2-E): PLS-SEM lidera,
+  se sombrea PLS-SEM y el punto 2 queda dentro; el punto 1 se queda en
+  Regression (líder en aquel paso). Verificado en 1440×900, 1024×768 y
+  390×844.
+
 ## Hecho (2026-07-18)
 - **Rueda grande legible** (`components/mandala.jsx`):
   - El SVG interno ahora usa `width/height="100%"`: antes tenía 1100px fijos
