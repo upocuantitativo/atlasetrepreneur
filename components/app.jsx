@@ -383,9 +383,16 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
           </div>
         </div>
 
-        <div className="overlay-mid">
-          <window.Breadcrumbs history={history} onJump={handleJump} />
-        </div>
+        {/* Spacer that keeps the dialog anchored at the bottom. The answer
+            trail now lives in the right-hand choices rail. */}
+        <div className="overlay-mid" />
+
+        {history.length > 0 && (
+          <div className="choices-rail">
+            <div className="choices-title">Your choices</div>
+            <window.Breadcrumbs history={history} onJump={handleJump} />
+          </div>
+        )}
 
         <window.DialogBar
           question={currentQ}

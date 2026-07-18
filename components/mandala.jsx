@@ -269,18 +269,10 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                   style={{ textTransform: 'uppercase' }}>
                   {s.label}
                 </text>
-                <text x={lx} y={ly + size * 0.027}
-                  fill={theme.labelDim}
-                  fontSize={size * 0.016}
-                  fontFamily={theme.serif}
-                  textAnchor="middle"
-                  paintOrder="stroke"
-                  stroke={theme.halo}
-                  strokeWidth={size * 0.004}
-                  strokeLinejoin="round"
-                  fontStyle="italic">
-                  {s.sub}
-                </text>
+                {/* The italic sub-caption used to render here, under every
+                    method name, but the tilt + halo made it illegible — it
+                    now lives as crisp HTML under the mini-map (the leader's
+                    sub) and in the mobile HUD instead. */}
               </g>
             );
           })}
@@ -373,21 +365,26 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                   textAnchor="middle"
                   fontWeight={700}
                   transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>{p.idx}</text>
-                <text
-                  x={p.x + ox} y={p.y + oy}
-                  fill="#fff"
-                  fontSize={size * 0.026}
-                  fontFamily={theme.serif}
-                  fontWeight={600}
-                  textAnchor={anchor}
-                  dominantBaseline={baseline}
-                  paintOrder="stroke"
-                  stroke="#000"
-                  strokeWidth={size * 0.0058}
-                  strokeLinejoin="round"
-                  transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>
-                  {p.label}
-                </text>
+                {/* Only the LATEST answer is spelled out on the disc — the
+                    full numbered trail lives in the choices rail on the
+                    right, so older vertices stay as clean numbered dots. */}
+                {p.isLast && (
+                  <text
+                    x={p.x + ox} y={p.y + oy}
+                    fill="#fff"
+                    fontSize={size * 0.026}
+                    fontFamily={theme.serif}
+                    fontWeight={600}
+                    textAnchor={anchor}
+                    dominantBaseline={baseline}
+                    paintOrder="stroke"
+                    stroke="#000"
+                    strokeWidth={size * 0.0058}
+                    strokeLinejoin="round"
+                    transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>
+                    {p.label}
+                  </text>
+                )}
               </g>
             );
           })}

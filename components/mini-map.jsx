@@ -110,6 +110,19 @@ window.MiniMap = function MiniMap({ focusSector, focusRing, scores, tone = 'seri
           </g>
         )}
       </svg>
+      {/* Crisp HTML caption for the leading method — this replaces the
+          italic sub-labels that used to sit under every method name on
+          the tilted big wheel, where the 3D effect made them illegible. */}
+      {focusSector && (() => {
+        const f = sectors.find(s => s.id === focusSector);
+        if (!f) return null;
+        return (
+          <div className="mini-focus">
+            <div className="mini-focus-name" style={{ color: `oklch(0.45 0.2 ${f.hue})` }}>{f.label}</div>
+            <div className="mini-focus-sub">{f.sub}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

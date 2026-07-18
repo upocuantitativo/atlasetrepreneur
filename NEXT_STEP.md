@@ -1,5 +1,27 @@
 # NEXT_STEP
 
+## Hecho (2026-07-18, 4ª tanda)
+- **Rediseño del layout de juego** (feedback: "no veo las respuestas / no
+  puedo hacer scroll"):
+  - **Columna de elecciones a la derecha** (`.choices-rail`, app.jsx):
+    las respuestas dadas (Breadcrumbs) ya no van arriba a la izquierda sino
+    en una lista vertical COMPACTA (11.5px, líneas seguidas, ellipsis, scroll
+    interno propio) bajo la mini-esfera, hasta el fondo del frame.
+  - **Preguntas y opciones a la izquierda** de esa columna
+    (`.dialog-rail { padding-right: 352px }`), opciones más compactas
+    (13px, padding 5×8, gap 4).
+  - En pantallas de poca altura (≤720px) `min-height:0` para el diálogo:
+    el bloque se ajusta al contenido y nunca hace falta scroll (verificado
+    Q1 con 7 opciones en 1200×560).
+  - **Subtítulos de metodología fuera de la esfera**: el texto italic bajo
+    cada nombre era ilegible por el efecto 3D → eliminado del mandala; ahora
+    el del método líder se muestra nítido en HTML bajo la mini-esfera
+    (`.mini-focus` en mini-map.jsx) y en el HUD móvil.
+  - **Esfera despejada**: solo el ÚLTIMO vértice del itinerario lleva
+    etiqueta de texto; los anteriores quedan como puntos numerados (su texto
+    completo está numerado igual en la columna de elecciones).
+  - Cache-bust: v=20260718d.
+
 ## Hecho (2026-07-18, 3ª tanda)
 - **Pregunta + respuestas a media pantalla**: `.dialog-bar` gana
   `min-height: 46vh` (sigue anclada abajo y creciendo hacia arriba, con
