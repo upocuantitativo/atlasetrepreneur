@@ -6,6 +6,10 @@
   scroll interno solo a partir de 70vh). Antes quedaba pegada al fondo y en
   pantallas bajas obligaba a hacer scroll. Verificado sin scroll en
   1440×900, 1280×650 y 390×844.
+- **Cache-busting**: el .htaccess cachea css/js 1 día, así que los
+  navegadores seguían viendo el CSS viejo tras el deploy. `index.html`
+  ahora versiona los assets (`?v=20260718c`). Al cambiar styles.css o
+  componentes, **subir la versión** del sufijo y redeploy.
 
 ## Hecho (2026-07-18, 2ª tanda)
 - **Rueda más grande y letra mayor** (feedback del usuario tras la 1ª tanda):
