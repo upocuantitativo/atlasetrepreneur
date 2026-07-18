@@ -1,5 +1,12 @@
 # NEXT_STEP
 
+## Hecho (2026-07-18, 3ª tanda)
+- **Pregunta + respuestas a media pantalla**: `.dialog-bar` gana
+  `min-height: 46vh` (sigue anclada abajo y creciendo hacia arriba, con
+  scroll interno solo a partir de 70vh). Antes quedaba pegada al fondo y en
+  pantallas bajas obligaba a hacer scroll. Verificado sin scroll en
+  1440×900, 1280×650 y 390×844.
+
 ## Hecho (2026-07-18, 2ª tanda)
 - **Rueda más grande y letra mayor** (feedback del usuario tras la 1ª tanda):
   plano `min(90vmin, 1100px)` (antes 82vmin/1000px) y subida de fuentes en
