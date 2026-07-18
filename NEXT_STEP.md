@@ -1,5 +1,12 @@
 # NEXT_STEP
 
+## Hecho (2026-07-18, 5ª tanda)
+- **Etiquetas de anillo como píldoras**: ANALYTIC GOAL / DATA STRUCTURE /
+  ASSUMPTIONS dejaron de ser texto oscuro con halo blanco (ilegible sobre
+  las cuñas inclinadas) y ahora son chips SVG: rect redondeado opaco
+  (`theme.pillBg/pillBorder`, por tema) + texto seminegrita sin cursiva.
+  El chip opaco además tapa el trazo del anillo. Cache-bust v=20260718e.
+
 ## Hecho (2026-07-18, 4ª tanda)
 - **Rediseño del layout de juego** (feedback: "no veo las respuestas / no
   puedo hacer scroll"):

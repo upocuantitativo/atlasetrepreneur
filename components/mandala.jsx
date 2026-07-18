@@ -285,30 +285,39 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
               lands at the same screen spot after the disc rotates, and
               the text itself is counter-rotated to read horizontally. */}
           {rings.map((r, i) => {
-            // Slight radial offset so the ring's own stroke does not
-            // strike through the words.
+            // Rendered as solid PILLS (chip background + crisp text), not
+            // haloed text — dark-on-white-outline lettering was illegible
+            // over the tilted coloured wedges. The opaque chip also hides
+            // the ring stroke behind the words.
             const radius = rOuter * r.rNorm + size * 0.014;
             const aDisc = ((300 - 90) - rotZ) * Math.PI / 180;
             const x = cx + radius * Math.cos(aDisc);
             const y = cy + radius * Math.sin(aDisc);
+            const fs = size * 0.0145;
+            const label = r.label.toUpperCase();
+            const w = label.length * fs * 0.78 + fs * 1.6;
+            const h = fs * 1.9;
             return (
-              <text key={`rlbl-${r.id}`}
-                x={x} y={y}
-                fill={theme.ringLabel}
-                fontSize={size * 0.0145}
-                fontFamily={theme.serif}
-                textAnchor="middle"
-                fontStyle="italic"
-                letterSpacing="0.18em"
-                paintOrder="stroke"
-                stroke={theme.halo}
-                strokeWidth={size * 0.0035}
-                strokeLinejoin="round"
-                opacity={focusRing === i ? 1 : 0.55}
+              <g key={`rlbl-${r.id}`}
+                opacity={focusRing === i ? 1 : 0.8}
                 transform={`rotate(${-rotZ}, ${x}, ${y})`}
-                style={{ textTransform: 'uppercase' }}>
-                {r.label}
-              </text>
+                style={{ transition: 'opacity 0.6s' }}>
+                <rect x={x - w / 2} y={y - h / 2} width={w} height={h}
+                  rx={h / 2}
+                  fill={theme.pillBg}
+                  stroke={theme.pillBorder}
+                  strokeWidth="1" />
+                <text x={x} y={y}
+                  fill={theme.ringLabel}
+                  fontSize={fs}
+                  fontFamily={theme.serif}
+                  fontWeight={600}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  letterSpacing="0.14em">
+                  {label}
+                </text>
+              </g>
             );
           })}
 
@@ -404,6 +413,8 @@ const TONES = {
     label: '#e8eeff',
     labelDim: '#9bb0d8',
     halo: 'rgba(2, 4, 14, 0.85)',
+    pillBg: 'rgba(8, 14, 34, 0.88)',
+    pillBorder: 'rgba(155, 176, 216, 0.45)',
     serif: '"EB Garamond", "Cormorant Garamond", Georgia, serif',
     fillStrong: 0.55, fillMid: 0.32, fillEdge: 0.15,
   },
@@ -416,6 +427,8 @@ const TONES = {
     label: '#1a1208',
     labelDim: '#7a6244',
     halo: 'rgba(247, 241, 227, 0.92)',
+    pillBg: 'rgba(252, 248, 238, 0.94)',
+    pillBorder: 'rgba(58, 42, 24, 0.35)',
     serif: '"EB Garamond", "Cormorant Garamond", Georgia, serif',
     fillStrong: 0.7, fillMid: 0.5, fillEdge: 0.3,
   },
@@ -428,6 +441,8 @@ const TONES = {
     label: '#0e1530',
     labelDim: '#5e6680',
     halo: 'rgba(255, 255, 255, 0.94)',
+    pillBg: 'rgba(255, 255, 255, 0.93)',
+    pillBorder: 'rgba(26, 37, 64, 0.25)',
     serif: '"Cormorant Garamond", "EB Garamond", Georgia, serif',
     fillStrong: 0.85, fillMid: 0.65, fillEdge: 0.4,
   },
