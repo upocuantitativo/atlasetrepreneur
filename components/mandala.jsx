@@ -94,17 +94,11 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
 
       const x = cx + radius * Math.cos(angleRad);
       const y = cy + radius * Math.sin(angleRad);
-      const labelDist = size * 0.045;
-      const lx = cx + (radius + labelDist) * Math.cos(angleRad);
-      const ly = cy + (radius + labelDist) * Math.sin(angleRad);
-      const cosA = Math.cos(angleRad), sinA = Math.sin(angleRad);
-      const anchor = cosA >  0.4 ? 'start' : cosA < -0.4 ? 'end' : 'middle';
-      const baseline = sinA >  0.5 ? 'hanging' : sinA < -0.5 ? 'auto' : 'middle';
       const ranked = Object.entries(acc).sort((a, b) => b[1] - a[1]);
       const leaderId = ranked.length ? ranked[0][0] : null;
       const sector = sectors.find(s => s.id === leaderId) || sectors[0];
       return {
-        x, y, lx, ly, anchor, baseline,
+        x, y, angleRad,
         sectorId: sector.id, hue: sector.hue,
         label: shortAnswer(h.answerLabel),
         idx: idx + 1,
@@ -183,7 +177,14 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
           transform: `translateY(${translateY}px) rotateX(${tiltX}deg) rotateZ(${rotZ}deg) scale(${zoom})`,
         }}
       >
-        <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
+        {/* width/height 100%: the plane div is capped by CSS (82vmin), so a
+            fixed pixel size here would hang the drawing out of the div —
+            off-centre AND orbiting on rotateZ (the CSS pivot is the div
+            centre, not the drawing centre). overflow:visible — sector
+            names sit at the rim (≈ the viewBox edge at the cardinal
+            points); without it the glyph ascenders are clipped, e.g.
+            "GROUP CONTRASTS" losing its top half at north. */}
+        <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%" style={{ overflow: 'visible' }}>
           <defs>
             <radialGradient id="vignette" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor={theme.coreGlow} stopOpacity="0.9" />
@@ -249,7 +250,11 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
             );
           })}
 
-          {/* Sector labels — positioned outside the wheel */}
+          {/* Sector labels — positioned outside the wheel. Each label is
+              counter-rotated by -rotZ around its own anchor so it reads
+              horizontally on screen no matter which sector the disc has
+              been rotated to. A halo stroke (paintOrder) keeps the name
+              legible over wedges, the itinerary trail and the backdrop. */}
           {sectors.map(s => {
             const a = (s.angle - 90) * Math.PI / 180;
             const lx = cx + rOuter * 1.08 * Math.cos(a);
@@ -257,14 +262,20 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
             const isFocus = focusSector === s.id;
             const isDim = focusSector && !isFocus;
             return (
-              <g key={`lbl-${s.id}`} opacity={isDim ? 0.25 : 1} style={{ transition: 'opacity 0.6s' }}>
+              <g key={`lbl-${s.id}`} opacity={isDim ? 0.42 : 1}
+                style={{ transition: 'opacity 0.6s' }}
+                transform={`rotate(${-rotZ}, ${lx}, ${ly})`}>
                 <text x={lx} y={ly}
                   fill={theme.label}
-                  fontSize={size * 0.022}
+                  fontSize={size * (isFocus ? 0.027 : 0.022)}
                   fontFamily={theme.serif}
                   textAnchor="middle"
-                  fontWeight={isFocus ? 600 : 400}
+                  fontWeight={isFocus ? 700 : 400}
                   letterSpacing="0.04em"
+                  paintOrder="stroke"
+                  stroke={theme.halo}
+                  strokeWidth={size * 0.006}
+                  strokeLinejoin="round"
                   style={{ textTransform: 'uppercase' }}>
                   {s.label}
                 </text>
@@ -273,6 +284,10 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
                   fontSize={size * 0.014}
                   fontFamily={theme.serif}
                   textAnchor="middle"
+                  paintOrder="stroke"
+                  stroke={theme.halo}
+                  strokeWidth={size * 0.004}
+                  strokeLinejoin="round"
                   fontStyle="italic">
                   {s.sub}
                 </text>
@@ -280,19 +295,35 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
             );
           })}
 
-          {/* Ring labels — at top of each ring */}
+          {/* Ring labels — pinned to a fixed SCREEN position (upper-left
+              diagonal) instead of the disc's north, so they never fight
+              with the focused method name or the latest itinerary label
+              at the top, and never sink under the dialog bar at the
+              bottom. The disc angle is compensated by rotZ so the label
+              lands at the same screen spot after the disc rotates, and
+              the text itself is counter-rotated to read horizontally. */}
           {rings.map((r, i) => {
-            const radius = rOuter * r.rNorm;
+            // Slight radial offset so the ring's own stroke does not
+            // strike through the words.
+            const radius = rOuter * r.rNorm + size * 0.014;
+            const aDisc = ((300 - 90) - rotZ) * Math.PI / 180;
+            const x = cx + radius * Math.cos(aDisc);
+            const y = cy + radius * Math.sin(aDisc);
             return (
               <text key={`rlbl-${r.id}`}
-                x={cx} y={cy - radius - 6}
+                x={x} y={y}
                 fill={theme.ringLabel}
                 fontSize={size * 0.013}
                 fontFamily={theme.serif}
                 textAnchor="middle"
                 fontStyle="italic"
                 letterSpacing="0.18em"
+                paintOrder="stroke"
+                stroke={theme.halo}
+                strokeWidth={size * 0.0035}
+                strokeLinejoin="round"
                 opacity={focusRing === i ? 1 : 0.55}
+                transform={`rotate(${-rotZ}, ${x}, ${y})`}
                 style={{ textTransform: 'uppercase' }}>
                 {r.label}
               </text>
@@ -321,35 +352,55 @@ window.Mandala3D = function Mandala3D({ focusSector, focusRing, history, totalQu
               strokeLinecap="round"
               strokeLinejoin="round" />
           )}
-          {path.map((p, i) => (
-            <g key={`pp-${i}`}>
-              <circle cx={p.x} cy={p.y} r={size * 0.018}
-                fill="#000" stroke="#fff" strokeWidth={size * 0.0028} />
-              <text
-                x={p.x} y={p.y + size * 0.006}
-                fill="#fff"
-                fontSize={size * 0.015}
-                fontFamily={theme.serif}
-                textAnchor="middle"
-                fontWeight={700}
-                transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>{p.idx}</text>
-              <text
-                x={p.lx} y={p.ly}
-                fill="#fff"
-                fontSize={size * 0.022}
-                fontFamily={theme.serif}
-                fontWeight={600}
-                textAnchor={p.anchor}
-                dominantBaseline={p.baseline}
-                paintOrder="stroke"
-                stroke="#000"
-                strokeWidth={size * 0.005}
-                strokeLinejoin="round"
-                transform={`rotate(${-rotZ}, ${p.lx}, ${p.ly})`}>
-                {p.label}
-              </text>
-            </g>
-          ))}
+          {path.map((p, i) => {
+            // Label placement happens in SCREEN space: the text is counter-
+            // rotated by -rotZ around the vertex, which composes with the
+            // disc's CSS rotateZ into the identity — so an (ox, oy) offset
+            // from the vertex maps 1:1 to screen right/down. The LAST
+            // vertex is always rotated to north, right under the focused
+            // method name, so its label goes DOWNWARD (toward the centre)
+            // instead of outward; older vertices label radially outward
+            // along their on-screen direction.
+            const rotZRad = rotZ * Math.PI / 180;
+            const screenAng = p.angleRad + rotZRad;
+            const cosS = Math.cos(screenAng), sinS = Math.sin(screenAng);
+            const labelDist = size * 0.045;
+            const ox = p.isLast ? 0 : labelDist * cosS;
+            const oy = p.isLast ? labelDist * 1.15 : labelDist * sinS;
+            const anchor = p.isLast ? 'middle'
+              : (cosS > 0.4 ? 'start' : cosS < -0.4 ? 'end' : 'middle');
+            const baseline = p.isLast ? 'hanging'
+              : (sinS > 0.5 ? 'hanging' : sinS < -0.5 ? 'auto' : 'middle');
+            return (
+              <g key={`pp-${i}`}>
+                <circle cx={p.x} cy={p.y} r={size * 0.018}
+                  fill="#000" stroke="#fff" strokeWidth={size * 0.0028} />
+                <text
+                  x={p.x} y={p.y + size * 0.006}
+                  fill="#fff"
+                  fontSize={size * 0.015}
+                  fontFamily={theme.serif}
+                  textAnchor="middle"
+                  fontWeight={700}
+                  transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>{p.idx}</text>
+                <text
+                  x={p.x + ox} y={p.y + oy}
+                  fill="#fff"
+                  fontSize={size * 0.022}
+                  fontFamily={theme.serif}
+                  fontWeight={600}
+                  textAnchor={anchor}
+                  dominantBaseline={baseline}
+                  paintOrder="stroke"
+                  stroke="#000"
+                  strokeWidth={size * 0.005}
+                  strokeLinejoin="round"
+                  transform={`rotate(${-rotZ}, ${p.x}, ${p.y})`}>
+                  {p.label}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </div>
     </div>
@@ -365,6 +416,7 @@ const TONES = {
     ringLabel: '#9bb0d8',
     label: '#e8eeff',
     labelDim: '#9bb0d8',
+    halo: 'rgba(2, 4, 14, 0.85)',
     serif: '"EB Garamond", "Cormorant Garamond", Georgia, serif',
     fillStrong: 0.55, fillMid: 0.32, fillEdge: 0.15,
   },
@@ -376,6 +428,7 @@ const TONES = {
     ringLabel: '#5a4530',
     label: '#1a1208',
     labelDim: '#7a6244',
+    halo: 'rgba(247, 241, 227, 0.92)',
     serif: '"EB Garamond", "Cormorant Garamond", Georgia, serif',
     fillStrong: 0.7, fillMid: 0.5, fillEdge: 0.3,
   },
@@ -387,6 +440,7 @@ const TONES = {
     ringLabel: '#1a2540',
     label: '#0e1530',
     labelDim: '#5e6680',
+    halo: 'rgba(255, 255, 255, 0.94)',
     serif: '"Cormorant Garamond", "EB Garamond", Georgia, serif',
     fillStrong: 0.85, fillMid: 0.65, fillEdge: 0.4,
   },
@@ -397,9 +451,13 @@ window.MANDALA_TONES = TONES;
 // Compress an answer label into ~3 words for plotting on the polyline.
 function shortAnswer(s) {
   if (!s) return '';
-  // Drop everything from the first dash, em-dash or parenthesis onward.
-  const cut = s.split(/[—–\-(]/)[0].trim();
+  // Drop everything from the first STANDALONE dash (space-surrounded) or
+  // parenthesis onward. Hyphens inside words ("pre-specified", "PLS-SEM")
+  // must survive — a bare [-] split used to truncate "Test a pre-specified
+  // …" down to "Test a pre".
+  const cut = s.split(/\s[—–-]\s|[—–]|\(/)[0].trim();
   const words = cut.split(/\s+/);
-  if (words.length <= 4) return cut;
-  return words.slice(0, 4).join(' ') + '…';
+  const clean = (t) => t.replace(/[\s/,;:]+$/, '');
+  if (words.length <= 4) return clean(cut);
+  return clean(words.slice(0, 4).join(' ')) + '…';
 }

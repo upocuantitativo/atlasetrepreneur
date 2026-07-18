@@ -31,16 +31,35 @@ window.MiniMap = function MiniMap({ focusSector, focusRing, scores, tone = 'seri
     pin = { x: cx + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
   }
 
-  // Short labels (compact for the mini-map)
-  const SHORT = {
-    anova: 'CONTRASTS', regression: 'REG/SEM', fsqca: 'fsQCA', plssem: 'PLS-SEM',
-    cluster: 'CLUSTER', trees: 'TREES', xai: 'XAI/EBM', deep: 'NEURAL NETWORK',
+  // Full method names, split into (at most) two balanced lines so long
+  // names like NEURAL NETWORK or EXPLAINABLE AI / EBM never overflow.
+  const wrapLabel = (label) => {
+    // Keep the field's own casing for fsQCA; uppercase the rest.
+    const up = label === 'fsQCA' ? label : label.toUpperCase();
+    if (up.length <= 10) return [up];
+    const words = up.split(/\s+/);
+    if (words.length === 1) return [up];
+    let best = null;
+    for (let i = 1; i < words.length; i++) {
+      const l1 = words.slice(0, i).join(' ');
+      const l2 = words.slice(i).join(' ');
+      const span = Math.max(l1.length, l2.length);
+      if (!best || span < best.span) best = { span, lines: [l1, l2] };
+    }
+    return best.lines;
   };
+
+  // The viewBox is padded on every side: the labels sit OUTSIDE the wheel
+  // (at rLabel > rOuter), so without the padding the SVG edge truncated
+  // them — "NEURAL NETWORK" rendered as "EURAL NETWORK", "PLS-SEM" as
+  // "PLS-SE", etc.
+  const PAD_X = 48, PAD_Y = 16;
 
   return (
     <div className={`mini-map tone-${tone}`}>
       <div className="mini-title">Position</div>
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
+      <svg viewBox={`${-PAD_X} ${-PAD_Y} ${size + PAD_X * 2} ${size + PAD_Y * 2}`}
+        width={size + PAD_X * 2} height={size + PAD_Y * 2}>
         {sectors.map(s => {
           const score = (scores && scores[s.id]) || 0;
           const intensity = score / max;
@@ -59,23 +78,28 @@ window.MiniMap = function MiniMap({ focusSector, focusRing, scores, tone = 'seri
           <circle key={r.id} cx={cx} cy={cy} r={rOuter * r.rNorm}
             fill="none" stroke={theme.ringStroke} strokeOpacity="0.45" strokeWidth="0.6" />
         ))}
-        {/* Sector labels around the perimeter */}
+        {/* Sector labels around the perimeter — full names, 1-2 lines */}
         {sectors.map(s => {
           const a = (s.angle - 90) * Math.PI / 180;
           const lx = cx + rLabel * Math.cos(a);
           const ly = cy + rLabel * Math.sin(a);
           const isFocus = focusSector === s.id;
+          const lines = wrapLabel(s.label);
+          const LH = 10;
+          const y0 = ly - ((lines.length - 1) * LH) / 2;
           return (
-            <text key={`l-${s.id}`} x={lx} y={ly}
+            <text key={`l-${s.id}`} x={lx} y={y0}
               fill={isFocus ? `oklch(0.45 0.22 ${s.hue})` : theme.label}
               fontSize="9"
               fontFamily={theme.serif}
               fontWeight={isFocus ? 700 : 500}
-              letterSpacing="0.08em"
+              letterSpacing="0.06em"
               textAnchor="middle"
               dominantBaseline="middle"
               opacity={isFocus ? 1 : 0.75}>
-              {SHORT[s.id] || s.label}
+              {lines.map((ln, li) => (
+                <tspan key={li} x={lx} dy={li === 0 ? 0 : LH}>{ln}</tspan>
+              ))}
             </text>
           );
         })}

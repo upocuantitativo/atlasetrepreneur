@@ -95,6 +95,9 @@ body { background: #f5f4ef; color: #1a1a1a; }
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: 20px 32px; gap: 24px;
 }
+.overlay-top-right {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+}
 .overlay-mid {
   flex: 1;
   display: flex; align-items: flex-start; padding: 0 36px;
@@ -480,6 +483,9 @@ body { background: #f5f4ef; color: #1a1a1a; }
 .tone-editorial .compare-rank { color: #5e6680; }
 
 /* ==== Sector HUD — "You are here" ==== */
+/* Desktop already shows the current method twice (big-wheel north label +
+   mini-map), and the HUD used to collide with the itinerary label under
+   the north vertex — so it is a MOBILE-ONLY compact indicator now. */
 .sector-hud {
   position: absolute;
   left: 50%;
@@ -489,6 +495,7 @@ body { background: #f5f4ef; color: #1a1a1a; }
   pointer-events: none;
   z-index: 5;
   text-shadow: 0 2px 18px rgba(0,0,0,0.7);
+  display: none;
 }
 .sector-hud-eyebrow {
   font-family: var(--serif);
@@ -1439,13 +1446,21 @@ body.atlas-help-dragging .chat-help-ghost { pointer-events: none; }
   .overlay-top { padding: 12px 14px; }
 }
 
-/* Mobile: hide the breadcrumb trail and the sector HUD so the dialog has
-   maximum room. The user can still navigate via the back arrow + the
-   dialog progress counter. */
+/* Mobile: hide the breadcrumb trail so the dialog has maximum room. The
+   sector HUD stays visible in a COMPACT form pinned under the brand
+   header — on phones the mini-map is hidden and the SVG sector names are
+   too small, so this is the only readable "current method" indicator. */
 @media (max-width: 760px) {
   .breadcrumbs { display: none; }
-  .sector-hud { display: none; }
-  .overlay-mid { display: none; }
+  .sector-hud { display: block; top: 58px; width: 100%; padding: 0 12px; }
+  .sector-hud-eyebrow { font-size: 10px; margin-bottom: 2px; letter-spacing: 0.2em; }
+  .sector-hud-name { font-size: 22px; }
+  .sector-hud-sub { font-size: 12px; margin-top: 2px; }
+  /* Keep .overlay-mid as the flex SPACER that pushes the dialog to the
+     bottom of the viewport — removing it (old display:none) let the
+     dialog float up under the brand and bury the wheel + itinerary.
+     The breadcrumbs inside it are hidden separately above. */
+  .overlay-mid { visibility: hidden; }
   /* Mobile: header still transparent, disc may sit slightly under it. */
   /* Smaller, tighter option buttons on phones */
   .dialog-options { gap: 5px; }

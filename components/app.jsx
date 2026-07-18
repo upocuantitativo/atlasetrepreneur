@@ -354,7 +354,7 @@ window.GuideApp = function GuideApp({ tone = 'serif-dark' }) {
         isFinal={!currentQ || (qIdx + 1 >= total)}
         tone={tone} />
 
-      {focusSectorObj && history.length >= 3 && (
+      {focusSectorObj && history.length >= 1 && (
         <div className="sector-hud">
           <div className="sector-hud-eyebrow">Current leaning</div>
           <div className="sector-hud-name" style={{ color: `oklch(0.78 0.18 ${focusSectorObj.hue})` }}>
