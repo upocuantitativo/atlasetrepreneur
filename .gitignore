@@ -30,3 +30,13 @@ chat_config.php
 .claude/
 uploads/
 ejemplo.png
+
+# secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.ppk
+*credentials*.json
+chat_config.php
+*secret*

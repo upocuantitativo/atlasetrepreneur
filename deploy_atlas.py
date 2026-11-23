@@ -16,7 +16,8 @@ import paramiko
 HOST = "82.25.113.179"
 PORT = 65002
 USER = "u262522767"
-PASS = "***REMOVED***"
+# La contraseña nunca va en el código: variable YLW_SFTP_PASS o fichero ~/.ylw/sftp_pass.txt
+PASS = os.environ.get("YLW_SFTP_PASS") or open(os.path.join(os.path.expanduser("~"), ".ylw", "sftp_pass.txt"), encoding="utf-8").read().strip()
 LOCAL_ROOT = os.path.dirname(os.path.abspath(__file__))
 REMOTE_ROOT = "domains/upo.digital/public_html/atlas"
 
