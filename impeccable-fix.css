@@ -1,0 +1,4 @@
+/* Correcciones de legibilidad (impeccable detect), 2026-11-24. Solo color y tamaño de letra.
+   Para deshacerlas: quitar el <link> a este fichero en el HTML. */
+span.chat-rail-toggle-label { color: #42434d !important; }
+span.progress-total { color: #676d7f !important; }
